@@ -404,13 +404,13 @@ def update_particle_behavior(particle_states, history_states):
         """
         try:
             retries = 0
-            max_retries = 3  # 最大重试次数
+            max_retries = 3  
             while retries < max_retries:
                 try:
                     response = client.chat.completions.create(
                         model="gpt-4o",
                         messages=[{"role": "user", "content": prompt}],
-                        max_tokens=150,  # 增加 max_tokens 以便输出更多内容
+                        max_tokens=150,  
                         temperature=0.7
                     )
                     
@@ -426,13 +426,13 @@ def update_particle_behavior(particle_states, history_states):
                     dx, dy, dz = map(float, movement_line.replace("Movement Vector:", "").split(","))
                     explanation = explanation_line.replace("Explanation:", "").strip()
 
-                    break  # 成功后退出重试循环
+                    break  #
                 except Exception as e:
                     retries += 1
                     print(f"Error with OpenAI API: {e}")
                     if retries < max_retries:
                         print(f"Retrying... ({retries}/{max_retries})")
-                        time.sleep(2)  # 等待 2 秒后重试
+                      
                     else:
                         print("Max retries reached. Returning default values.")
                         dx, dy, dz = 0, 0, 0
