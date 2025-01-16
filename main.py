@@ -107,9 +107,9 @@ domain_depth = 100
 
 
 
-x_positions = np.full(num_particles, 495) #start at most east grid
-y_positions = np.random.uniform(0, domain_length_y, num_particles) #random released in y direction for the mosteast grid  
-z_positions = np.zeros(num_particles) #start at surface
+ini_x_positions = np.full(num_particles, 495) #start at most east grid
+ini_y_positions = np.random.uniform(0, domain_length_y, num_particles) #random released in y direction for the mosteast grid  
+ini_z_positions = np.zeros(num_particles) #start at surface
 particle_behavior = np.zeros((num_particles, 3))  # Behavior speeds for dx, dy, dz
 
 
@@ -123,9 +123,9 @@ trajectories_bathy = np.full((num_particles, total_steps), np.nan)
 
 
 # Store initial positions
-trajectories_x[:, 0] = x_positions
-trajectories_y[:, 0] = y_positions
-trajectories_z[:, 0] = z_positions
+trajectories_x[:, 0] = ini_x_positions
+trajectories_y[:, 0] = ini_y_positions
+trajectories_z[:, 0] = ini_z_positions
 trajectories_bathy[:, 0] = -100
 
 
@@ -402,6 +402,7 @@ def update_particle_behavior(particle_states, history_states):
         Movement Vector: 0.1, 0.1, 0.0001
         Explanation: A short text explaining
         """
+        #dx, dy, dz = -0.01, -0.01, -0.001
         
         try:
             retries = 0
@@ -445,8 +446,8 @@ def update_particle_behavior(particle_states, history_states):
             explanation = "No explanation due to an unexpected error."
 
         behaviors.append([dx, dy, dz])
-        print(explanation)
-        explanations.append(explanation)
+        #print(explanation)
+        #explanations.append(explanation)
 
     return np.array(behaviors)
 
@@ -492,15 +493,36 @@ time_window = (149, 179) #step_index =25-30days
 
 
 
-num_iterations = 2
+num_iterations = 10
 
 
 history_states = []
 trajectory_rewards = []
 
+
+
 for ite in range(1, num_iterations + 1):  
     step_index = 0
-    for day in range(1, num_days-1):
+    x_positions = ini_x_positions.copy()
+    y_positions = ini_y_positions.copy()
+    z_positions = ini_z_positions.copy()
+
+    # Initialize arrays to store particle trajectories (in km for x and y, and meters for z)
+    trajectories_x = np.full((num_particles, total_steps), np.nan)
+    trajectories_y = np.full((num_particles, total_steps), np.nan)
+    trajectories_z = np.full((num_particles, total_steps), np.nan)
+    trajectories_bathy = np.full((num_particles, total_steps), np.nan)
+    
+    
+    # Store initial positions
+    trajectories_x[:, 0] = ini_x_positions
+    trajectories_y[:, 0] = ini_y_positions
+    trajectories_z[:, 0] = ini_z_positions
+    trajectories_bathy[:, 0] = -100
+
+
+    
+    for day in range(1, num_days+1):
 
         daily_u_velocity, daily_v_velocity, daily_w_velocity = create_daily_velocity_fields(u_velocity)
 
@@ -609,11 +631,12 @@ print("Rewards1:", rewards1)
 
 
 
-# final--ite trajectory
-final_trajectories_x = trajectories_x[:, step_index - steps_per_day * num_days:step_index]
-final_trajectories_y = trajectories_y[:, step_index - steps_per_day * num_days:step_index]
-final_trajectories_z = trajectories_z[:, step_index - steps_per_day * num_days:step_index]
-final_trajectories_bathy = trajectories_bathy[:, step_index - steps_per_day * num_days:step_index]
+# 提取最后一次迭代的轨迹数据
+final_trajectories_x = trajectories_x
+final_trajectories_y = trajectories_y
+final_trajectories_z = trajectories_z
+final_trajectories_bathy = trajectories_bathy
+
 
 plotsteps1 = final_trajectories_x.shape[1]
 plotsteps2 = np.arange(plotsteps1)
