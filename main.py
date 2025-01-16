@@ -402,6 +402,7 @@ def update_particle_behavior(particle_states, history_states):
         Movement Vector: 0.1, 0.1, 0.0001
         Explanation: A short text explaining
         """
+        
         try:
             retries = 0
             max_retries = 3  
@@ -490,7 +491,7 @@ time_window = (149, 179) #step_index =25-30days
 # Calculate rewards function 1
 
 
-step_index = 0
+
 num_iterations = 2
 
 
@@ -498,6 +499,7 @@ history_states = []
 trajectory_rewards = []
 
 for ite in range(1, num_iterations + 1):  
+    step_index = 0
     for day in range(1, num_days-1):
 
         daily_u_velocity, daily_v_velocity, daily_w_velocity = create_daily_velocity_fields(u_velocity)
