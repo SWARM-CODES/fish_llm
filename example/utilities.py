@@ -57,31 +57,54 @@ def get_particle_states(
     x_positions, y_positions, z_positions,
     u_velocity, v_velocity, w_velocity,
     temperature_field_with_noise, bathymetry, sigma_layers,
-    domain_length_x, domain_length_y, domain_depth, x_dim, y_dim, z_dim
+    domain_length_x, domain_length_y, domain_depth, x_dim, y_dim, z_dim, day
 ):
+    enabled_states = get_enabled_states()
     num_particles = len(x_positions)
-    particle_states = np.zeros((num_particles, 7))  # [x, y, z, u, v, w, temp]
+    particle_states = [enabled_states.copy() for _ in range(num_particles)]
 
     for i in range(num_particles):
+        state = {}
         x, y, z = x_positions[i], y_positions[i], z_positions[i]
+        
+        if "x" in enabled_states:
+                state["x"] = x
+        if "y" in enabled_states:
+                state["y"] = y
+        if "z" in enabled_states:
+                state["z"] = z
+
 
         # Get velocity at particle location
         u_vel, v_vel, w_vel = get_particle_velocity(
             x, y, z, u_velocity, v_velocity, w_velocity,
             domain_depth, x_dim, y_dim, z_dim
         )
+        if "u" in enabled_states:
+                state["u"] = u_vel
+        if "v" in enabled_states:
+                state["v"] = v_vel
+        if "w" in enabled_states:
+                state["w"] = w_vel
 
         # Get bathymetry depth and temperature
         x_idx = min(int(x / (domain_length_x / x_dim)), x_dim - 1)
         y_idx = min(int(y / (domain_length_y / y_dim)), y_dim - 1)
-        bathymetry_depth = max(abs(bathymetry[y_idx, x_idx]), 1e-5)
+        if "bathymetry" in enabled_states:
+            bathymetry_depth = max(abs(bathymetry[y_idx, x_idx]), 1e-5)
+            state["bathymetry"] = -bathymetry_depth
         z_idx = int((z / bathymetry_depth) * z_dim)
         z_idx = max(0, min(z_idx, z_dim - 1))
 
-        temperature = temperature_field_with_noise[x_idx, y_idx, z_idx]
-
+        if "temperature" in enabled_states:
+            temperature = temperature_field_with_noise[x_idx, y_idx, z_idx]
+            state["temperature"] = temperature
+        
+        if "day" in enabled_states:
+           day = day
+           state["day"] = day 
         # Store particle state
-        particle_states[i] = [x, y, z, u_vel, v_vel, w_vel, temperature]
+        particle_states[i].update(state)
 
     return particle_states
 def hydrodynamic_and_behavior_update(
@@ -130,4 +153,11 @@ def hydrodynamic_and_behavior_update(
         step_index += 1
 
     return trajectories_x, trajectories_y, trajectories_z, trajectories_bathy, step_index
+def get_enabled_states():
+    from ptrajstates_config import PARTICLE_STATE_CONFIG
+    return {
+        key: config["default"]
+        for key, config in PARTICLE_STATE_CONFIG.items()
+        if config["enabled"]
+    }
 

@@ -3,37 +3,54 @@ You are an intelligent agent controlling fish larvae in an ocean environment. Yo
 
 #### Knowledge
 1. **Vertical Migration Patterns**:
+    - Adjust Vertical migration velocity dynamically (0m/s to 0.0005m/s) based on:
     - **Surface dwelling**:
         - Favor the upper 10 meters if temperatures are within the preferred range (17-30°C) and settlement cues are distant.
     - **Ontogenetic Vertical Migration (OVM)**:
-        - Gradually adjust depth, averaging 1e-4 m/s, influenced by flow resistance and temperature gradients.
+        - Gradually adjust depth, influenced by flow resistance and temperature gradients.
         - Favor deeper areas as larvae mature.
     - **Wide vertical spread**:
         - Distribute across depths to maximize dispersal opportunities if environmental conditions vary significantly or settlement cues are unclear.
 
 2. **Swimming Behaviors**:
     - **Active Swimming**:
-        - Adjust speed dynamically, commonly 0.10 m/s, based on:
-        - Flow strength (u, v) for efficient movement.
-        - Proximity to settlement areas in the west.
-        - Direct swimming to shallower areas, guided by bathymetry changes.
+        - Larvae start active swimming on day = 5 and later.
+        - Adjust speed dynamically (0m/s to 0.4m/s) based on:
+            - Flow strength (u, v) for efficient movement.
+            - Larvae can swim against the environmental flow if the flow pushes them toward unsuitable conditions (e.g., unsuitable bathymetry or temperature ranges).
+            - Avoiding unsuitable conditions increases their survival and chances of settlement.
     - **Passive Drift**:
-        - Pre-flexion larvae rely solely on environmental flow (u, v, w).
+        - Pre-flexion larvae (day < 5) rely **entirely** on environmental flow (u, v, w).
+        - **Rules for Pre-flexion**:
+            - Horizontal movement must be passive: `dx = 0` and `dy = 0`.
+            - Vertical movement (`dz`) is determined by environmental factors only.
+            - Any suggestion of active swimming or nonzero `dx`/`dy` at day < 5 is invalid.
+
+    
 
 3. **Evaluate Environmental Suitability**:
-    - Avoid unsuitable temperatures (<16°C or >22°C).
-    - Adjust vertical and horizontal movement to optimize settlement chances in the west shallow area.
+    - Avoid unsuitable temperatures (<16°C or >22°C).Water tends to be colder at greater depths and warmer near the surface. Similarly, shallow areas with smaller bathymetry values are generally warmer, while deeper areas with larger bathymetry values are colder. Larvae should strive to navigate toward this suitable temperature range, and if they are already within it, they should remain there.
+    - Adjust vertical and horizontal movement to optimize settlement chance.
+    - Use bathymetry as a guide:
+        - Larvae sense the bathymetry only when they are within of it (i.e., 5 meters). If the depth difference is greater than 5 meters, rely on environmental cues (e.g., flow strength, temperature gradients) to guide movement.
+        - Larvae need to settle in areas where the bathymetry is between 20 and 30 meters during the settlement window (day from 8 to 10), and if they are already within it, they should try to remain there.
+        - Avoid moving closer to bathymetry if it is too shallower (<20 meters).
+        - If flow pushes larvae toward unsuitable shallow areas (<20 meters), actively swim against the flow to maintain a safe depth range.
 
+4. **General Survival and Settlement Strategy**:
+    - Avoid settling in areas with unsuitable bathymetry or temperature, as this reduces survival and settlement chances.
+    - If larvae are in danger of moving into shallow unsuitable areas, prioritize swimming vertically or against the flow to stay within the safe bathymetry range (20–30 meters)
+    - Larvae should be close to the bottom of the ocean and ensure that the environmental temperature is suitable during their settlement window (day 8 to day 10) to prepare for their settlement
+    - **Anticipate Future Conditions**:
+        - Even in a suitable habitat, larvae should monitor flow currents to predict potential drift.
+        - Proactively adjust movement to counteract drifting out of suitable habitats.
+        - Staying within the suitable range (bathymetry 20–30 meters, temperature 17–30°C) is critical for survival and settlement.
 #### Current Particle State:
-- Position:
-    - X (East-West, km): {x:.2f} km
-    - Y (North-South, km): {y:.2f} km
-    - Z (Depth, m): {z:.2f} m (negative values indicate depth below sea level, so must be negative).
-- Flow Velocity:
-    - U (East-West speed, m/s): {u:.2f} m/s
-    - V (North-South speed, m/s): {v:.2f} m/s
-    - W (Vertical speed, m/s): {w:.2f} m/s.
-- Current Temperature: {temp:.2f} °C.
+{dynamic_particle_state}
+
+#### Particle History:
+{history_str}
+
 
 #### Task:
 1. **Decide the Next Movement**:
@@ -44,15 +61,37 @@ You are an intelligent agent controlling fish larvae in an ocean environment. Yo
 
 2. **Generate an Explanation**:
     - Include:
-        - What direction the particle swims `(dx=?, dy=?)` and why.
-        - What vertical migration it performs `(dz=?)` and why.
+        - What direction the particle swims `(dx=?, dy=?)` and the reasoning (e.g., moving toward suitable bathymetry or avoiding unsuitable conditions).
+        - What vertical migration it performs `(dz=?)` and the reasoning (e.g., adjusting depth to maintain proximity to suitable bathymetry or avoid settling prematurely).
         - The current temperature value influencing the decision.
 
-#### Output Format:
+#### Directional Rules:
+1. **Southwest**: `dx < 0`, `dy < 0`
+2. **South**: `dx = 0`, `dy < 0`
+3. **North**: `dx = 0`, `dy > 0`
+4. **Southeast**: `dx > 0`, `dy < 0`
+5. **Northwest**: `dx < 0`, `dy > 0`
+6. **Northeast**: `dx < 0`, `dy = 0`
+7. **East**: `dx > 0`, `dy = 0`
+8. **West**: `dx < 0`, `dy = 0`
+
+**Important:**
+- Your response must adhere strictly to the format below. If the response deviates in any way, it will be discarded, and the agent will have to repeat the task.
+- Do not include any additional text, explanation, or commentary outside the specified structure.
+- First line must start with Movement Vector:
+- Second line must start with Explanation:
+
+#### Output Format(Must follow this form, do not say any other words, or repalce Movement Vector and Explanation with other words):
 - Movement Vector: <dx>, <dy>, <dz>
-- Explanation: swim what direction (dx=?, dy=?), why, do what Vertical migration (dz=?), why, with dx=<dx>, dy=<dy>, dz=<dz> at temperature=<temp>°C.
+- Explanation: At day = <day>, swim direction `{direction}` (dx={dx}, dy={dy}), why;, do what Vertical migration (dz=?), why, with dx=<dx>, dy=<dy>, dz=<dz> at temperature=<temp>°C.
 
 #### Example Output:
-Movement Vector: 0.1, 0.1, 0.0001
-Explanation: swim north-east (dx=0.1, dy=0.1), to reach optimal habitat; do vertical migration (dz=0.0001), to adjust for temperature, with dx=0.1, dy=0.1, dz=0.0001 at temperature=25.0°C.
+#### Example 1:
+- Movement Vector: -0.5, -0.2, -0.1
+- Explanation: At day = 3, swim direction southwest (dx=-0.5, dy=-0.2), to approach suitable habitat; perform vertical migration (dz=-0.1), to maintain depth in suitable temperature; final movement vector is dx=-0.5, dy=-0.2, dz=-0.1 at temperature=20°C.
+
+#### Example 2:
+- Movement Vector: 0.0, -0.3, 0.1
+- Explanation: At day = 8, swim direction south (dx=0.0, dy=-0.3), to follow a favorable temperature gradient; perform vertical migration (dz=0.1), to approach optimal depth; final movement vector is dx=0.0, dy=-0.3, dz=0.1 at temperature=21°C.
+
 

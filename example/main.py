@@ -6,6 +6,7 @@ from reward_functions import reward_function_1, reward_function_2
 from utilities import (
     apply_boundary_conditions,
     get_particle_states,
+    get_enabled_states,
     hydrodynamic_and_behavior_update,
     load_environment,
 )
@@ -41,7 +42,7 @@ time_window = (48, 59) #(steps_per_day * 25, steps_per_day * 30)
 particle_state = []
 history_states = []
 trajectory_rewards = []
-num_iterations = 3
+num_iterations = 5
 
 
 
@@ -116,23 +117,24 @@ for ite in range(1, num_iterations + 1):
             x_dim,
             y_dim,
             z_dim,
+            day,
         )
 
         # Initialize history states and rewards if first iteration
         if len(history_states) < num_particles:
             history_states.extend([[] for _ in range(num_particles)])
             trajectory_rewards.extend([[] for _ in range(num_particles)])
-
+        enabled_states = get_enabled_states()
         # Update history states with particle information
         for i in range(num_particles):
-            x, y, z, u, v, w, temp = particle_states[i]
-            history_states[i].append(
-                {
-                    "ite": ite,
-                    "position": (x, y, z),
-                    "temperature": temp,
-                }
-            )
+            particle_state = particle_states[i]
+
+        # Dynamically create history entry for all enabled states
+            history_entry = {"ite": ite}  # Add iteration number
+            for key in enabled_states.keys():
+                history_entry[key] = particle_state[key]
+
+            history_states[i].append(history_entry)
 
         # Update particle behavior using LLM
         particle_behavior, explanations = llm_api.update_particle_behavior(
