@@ -13,6 +13,13 @@ def load_environment(day):
         w_velocity = nc.variables["w_velocity"][day, :, :, :]
         temperature = nc.variables["temperature"][day, :, :, :]
         bathymetry = nc.variables["bathymetry"][:, :]
+
+        # Transform from (y,x) to (x,y)
+        u_velocity = np.transpose(u_velocity, (1, 0, 2))
+        v_velocity = np.transpose(v_velocity, (1, 0, 2))
+        w_velocity = np.transpose(w_velocity, (1, 0, 2))
+        temperature = np.transpose(temperature, (1, 0, 2))
+        bathymetry = np.transpose(bathymetry, (1, 0))
     return u_velocity, v_velocity, w_velocity, temperature, bathymetry
 
 
@@ -51,7 +58,7 @@ def get_bathymetry(x, y, bathymetry, domain_length_x, domain_length_y, x_dim, y_
     y_idx = min(max(int(y / (domain_length_y / y_dim)), 0), y_dim - 1)  # Clamp y index
 
     
-    return bathymetry[y_idx, x_idx]
+    return bathymetry[x_idx, y_idx]
 
 def get_particle_states(
     x_positions, y_positions, z_positions,
@@ -91,7 +98,7 @@ def get_particle_states(
         x_idx = min(int(x / (domain_length_x / x_dim)), x_dim - 1)
         y_idx = min(int(y / (domain_length_y / y_dim)), y_dim - 1)
         if "bathymetry" in enabled_states:
-            bathymetry_depth = max(abs(bathymetry[y_idx, x_idx]), 1e-5)
+            bathymetry_depth = max(abs(bathymetry[x_idx, y_idx]), 1e-5)
             state["bathymetry"] = -bathymetry_depth
         z_idx = int((z / bathymetry_depth) * z_dim)
         z_idx = max(0, min(z_idx, z_dim - 1))

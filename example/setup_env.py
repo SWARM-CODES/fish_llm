@@ -53,7 +53,7 @@ def setup_environment():
     increase_rate = 2.0
     depth = bathymetry_shallow - np.arange(x_dim) * increase_rate
     # Generate bathymetry
-    bathymetry = np.tile(depth, (x_dim, 1))
+    bathymetry = np.tile(depth, (y_dim, 1))
     z = np.array([bathymetry * sigma for sigma in sigma_layers])
     x_grid, y_grid, z_grid = np.meshgrid(x, y, sigma_layers, indexing='xy')
     # Create initial u_velocity (base velocity without time variation)
@@ -69,11 +69,11 @@ def setup_environment():
     surface_temps = np.linspace(surface_temp_max, surface_temp_min, x_dim)
     bottom_temps = np.linspace(bottom_temp_max, bottom_temp_min, x_dim)
 
-    temperature_field = np.zeros((x_dim, y_dim, z_dim))
+    temperature_field = np.zeros((y_dim, x_dim, z_dim))
     for i in range(x_dim):
         for j in range(y_dim):
-            temperature_field[i, j, :] =  np.linspace(surface_temps[j], bottom_temps[j], z_dim)
-    noise = np.random.uniform(-1, 1, (x_dim, y_dim, z_dim))
+            temperature_field[j, i, :] =  np.linspace(surface_temps[i], bottom_temps[i], z_dim)
+    noise = np.random.uniform(-1, 1, (y_dim, x_dim, z_dim))
     temperature_field = temperature_field + noise
     temperature_field[0:15, 0:15, :] -= 5  
 
@@ -89,14 +89,14 @@ def setup_environment():
         
 
         # Create variables
-        u_var = nc.createVariable("u_velocity", "f4", ("time", "x", "y", "z"))
-        v_var = nc.createVariable("v_velocity", "f4", ("time", "x", "y", "z"))
-        w_var = nc.createVariable("w_velocity", "f4", ("time", "x", "y", "z"))
-        temp_var = nc.createVariable("temperature", "f4", ("time", "x", "y", "z"))
-        bathy_var = nc.createVariable("bathymetry", "f4", ("x", "y"))
-        x_grid_var = nc.createVariable("x_grid", "f4", ("x", "y", "z"))
-        y_grid_var = nc.createVariable("y_grid", "f4", ("x", "y", "z"))
-        z_grid_var = nc.createVariable("z_grid", "f4", ("x", "y", "z"))
+        u_var = nc.createVariable("u_velocity", "f4", ("time", "y", "x", "z"))
+        v_var = nc.createVariable("v_velocity", "f4", ("time", "y", "x", "z"))
+        w_var = nc.createVariable("w_velocity", "f4", ("time", "y", "x", "z"))
+        temp_var = nc.createVariable("temperature", "f4", ("time", "y", "x", "z"))
+        bathy_var = nc.createVariable("bathymetry", "f4", ("y", "x"))
+        x_grid_var = nc.createVariable("x_grid", "f4", ("y", "x", "z"))
+        y_grid_var = nc.createVariable("y_grid", "f4", ("y", "x", "z"))
+        z_grid_var = nc.createVariable("z_grid", "f4", ("y", "x", "z"))
     
 
 

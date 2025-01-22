@@ -42,7 +42,7 @@ time_window = (48, 59) #(steps_per_day * 25, steps_per_day * 30)
 particle_state = []
 history_states = []
 trajectory_rewards = []
-num_iterations = 5
+num_iterations = 1
 
 
 
@@ -92,12 +92,14 @@ for ite in range(1, num_iterations + 1):
     trajectories_y[:, 0] = y_positions
     trajectories_z[:, 0] = z_positions
     
- 
+    counter = 0
     iteration_explanations = []
     for day in range(num_days):
         print(f"Day {day + 1}/{num_days}")
         # Generate daily velocity fields
-        daily_u_velocity, daily_v_velocity, daily_w_velocity, temperature_field_with_noise, bathymetry = load_environment(day)
+        #if day % 6 == 0:
+        counter+=1
+        daily_u_velocity, daily_v_velocity, daily_w_velocity, temperature_field_with_noise, bathymetry = load_environment(counter-1)
 
 
         # Get particle states
@@ -192,6 +194,11 @@ for ite in range(1, num_iterations + 1):
         bathymetry,
         sigma_layers,
         time_window,
+        domain_length_x, 
+        domain_length_y, 
+        x_dim, 
+        y_dim,
+        z_dim,
     )
     end_time = time.time()
     elapsed_time = end_time - start_time
