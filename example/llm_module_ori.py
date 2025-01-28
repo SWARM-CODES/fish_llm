@@ -62,9 +62,76 @@ class LLMBehaviorAPI:
         prompt = prompt.replace("{history_str}", history_str)
 
         return prompt
+    def call_llm_batch(self, client, model, batch_prompts):
+        """
+        Call the LLM API with a batch of particle prompts.
+        """
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You must respond exactly in the specified format. Deviating from the format is not allowed. Each message relates to one particle."}
+            ] + batch_prompts,
+            max_tokens=150 * len(batch_prompts),  # Adjust based on batch size
+            temperature=0.7
+        )
+        return response
 
 
-    def update_particle_behavior(self, particle_states, history_states, prompt_path="prompt.txt"):
+    def generate_summary_prompt(self, particle_states, history_states, movements, summary_prompt_path):
+        """
+        Create a prompt for summarizing particle movements.
+        """
+        # Load the base summary prompt template
+        with open(summary_prompt_path, "r") as f:
+            base_prompt = f.read()
+
+    
+            # Generate dynamic particle states for all particles
+        particle_summaries = []
+        for i in range(len(particle_states)):
+            # Generate the dynamic state for the particle
+            dynamic_particle_state = self.generate_dynamic_particle_state(particle_states[i])
+
+            # Extract movement vector
+            movement = movements[i]
+            dx, dy, dz = movement[0], movement[1], movement[2]
+
+            # Generate history string
+            if history_states[i]:
+                history_str = "\n".join(
+                    [
+                        f"    Iteration {entry['ite']}: "
+                        + ", ".join([f"{key.capitalize()}={entry[key]:.2f}" for key in entry if key != "ite"])
+                        for entry in history_states[i]
+                    ]
+                )
+            else:
+                history_str = "    None"
+
+            # Combine the particle data into a single string
+            particle_summary = (
+                f"Particle {i + 1}:\n"
+                f"{dynamic_particle_state}\n"
+                f"- Movement Vector:\n"
+                f"    - dx: {dx:.2f}, dy: {dy:.2f}, dz: {dz:.2f}\n"
+                f"- History:\n"
+                f"{history_str}"
+            )
+            particle_summaries.append(particle_summary)
+
+        # Join all particle summaries with spacing
+        dynamic_particle_states = "\n\n".join(particle_summaries)
+
+
+        # Format the summary prompt
+        summary_prompt = base_prompt.replace("{dynamic_particle_states}", dynamic_particle_states)
+        return summary_prompt
+
+
+
+
+
+    def update_particle_behavior(self, particle_states, history_states, batch_size, prompt_path="prompt.txt"):
         # Read the prompt from an external text file
         from ptrajstates_config import PARTICLE_STATE_CONFIG
         enabled_states = get_enabled_states()
@@ -72,79 +139,85 @@ class LLMBehaviorAPI:
         behaviors = []
         explanations = []
 
-        for i in range(num_particles):
+        for i in range(0, num_particles, batch_size):
       #       behaviors.append([0.0, 0.0, 0.0]) #this is for debug process
       #       explanations.append("Example explanation for particle movement.") #this is for debug process
-            particle_state = particle_states[i]
-            particle_history = history_states[i] if len(history_states) > i else []
+           batch_particles = particle_states[i:i + batch_size]
+           batch_histories = history_states[i:i + batch_size]
+            
+
+           # Prepare batch prompts
+           batch_prompts = []
+           for j, particle_state in enumerate(batch_particles):
+               particle_history = batch_histories[j] if j < len(batch_histories) else []
 
             # Generate particle history string
-            history_str = "\n".join([
-            f"Iteration {entry['ite']}, Step {idx + 1}: "
-            + ", ".join([f"{key.capitalize()}={entry[key]:.2f}" for key in entry if key != "ite"])
-            for idx, entry in enumerate(particle_history)
-            ])
+               history_str = "\n".join([
+                   f"Iteration {entry['ite']}, Step {idx + 1}: "
+                   + ", ".join([f"{key.capitalize()}={entry[key]:.2f}" for key in entry if key != "ite"])
+                   for idx, entry in enumerate(particle_history)
+               ])
 
             # Format the prompt
-            prompt = self.generate_prompt(particle_state, history_str, prompt_path)
-           # prompt = base_prompt.format(
-           #      history_str=history_str,
-           # **{key: particle_state[key] for key in enabled_states.keys()}
-           # )
+               prompt = self.generate_prompt(particle_state, history_str, prompt_path)
+               batch_prompts.append({"role": "user", "content": prompt})
 
             # Make API call with retries
-            retries = 0
-            max_retries = 3
-            while retries < max_retries:
-                try:
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                        {"role": "system", "content": "You must respond exactly in the specified format. Deviating from the format is not allowed."},
-                        {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=150,
-                        temperature=0.7
-                    )
-
-                    response_text = response.choices[0].message.content.strip()
-                    # print(f"Raw Response from ChatGPT: {response_text}") 
-                    # Parse response
-                    # Split and validate response lines
-                    lines = response_text.split("\n")
-                    if len(lines) < 2:
-                        raise ValueError("Response does not contain the expected two lines.")
-
-                    # Validate "Movement Vector" line
-                    if not lines[0].startswith("- Movement Vector:"):
-                        raise ValueError("First line must start with 'Movement Vector:'")
-                    # Parse "Movement Vector"
-                    movement_vector = lines[0].replace("- Movement Vector:", "").strip()
-                    try:
-                        dx, dy, dz = map(float, movement_vector.split(","))
-                    except ValueError as e:
-                        raise ValueError(f"Error parsing Movement Vector: {movement_vector}") from e
-
-        # Validate "Explanation" line
-                    if not lines[1].startswith("- Explanation:"):
-                        raise ValueError("Second line must start with 'Explanation:'")
-                    if "<dx>" in lines[1] or "<dy>" in lines[1] or "<dz>" in lines[1] or "<temp>" in lines[1]:
-                        raise ValueError("Placeholders not replaced in Explanation line.")
-                    
-                    explanation = lines[1].strip().replace("- Explanation:", "").strip()
-                    behaviors.append([dx, dy, dz])
-                    explanations.append(explanation)
+           retries = 0
+           max_retries = 3
+           while retries < max_retries:
+               try:
+                    response = self.call_llm_batch(self.client, self.model, batch_prompts)
+                    for choice in response.choices:
+                        response_text = choice.message.content.strip()
+                        try:
+                     # Split and parse movement vector
+                            lines = response_text.split("\n")
+                            if not lines[0].startswith("- Movement Vector:"):
+                                raise ValueError("First line must start with 'Movement Vector:'")
+                            movement_vector = lines[0].replace("- Movement Vector:", "").strip()
+                            dx, dy, dz = map(float, movement_vector.split(","))
+                            behaviors.append([dx, dy, dz])
+                        except Exception as e:
+                            print(f"Error parsing response for a particle: {e}")
+                            behaviors.append([0.0, 0.0, 0.0])  # Default fallback
+                  #      except Exception as e:
+                #response = [{"dx": 0.1, "dy": 0.2, "dz": -0.1} for _ in batch_prompts]
+                
                     break
-                except Exception as e:
-                    retries += 1
-                    wait_time = 2 ** retries  # Exponential backoff
-                    print(f"Retry {retries}/{max_retries}. Waiting {wait_time}s due to error: {e}")
-                    time.sleep(wait_time)
-                    if retries == max_retries:
-                        dx, dy, dz = 0, 0, 0
-                        explanation = "API call failed."
-                        behaviors.append([dx, dy, dz])
-                        explanations.append(explanation)
+               except Exception:
+                retries += 1
+                time.sleep(2 ** retries)  # Exponential backoff
+                error_message = str(e)
+                print(f"Error in batch API call (attempt {retries}/{max_retries}): {error_message}")
+                if retries == max_retries:
+                     print("API call failed after maximum retries. Using default behavior for the batch.")
+                     behaviors.extend([[0.0, 0.0, 0.0]] * len(batch_prompts))
+        return np.array(behaviors)
+    def summarize_movements(self, particle_states, history_states, movements, summary_prompt_path="summary_prompt.txt"):
+        """
+        Call an agent to summarize particle movements based on their states, histories, and movements.
+        """
+        # Generate a summary prompt
+        summary_prompt = self.generate_summary_prompt(particle_states, history_states, movements, summary_prompt_path)
 
-        return np.array(behaviors), explanations
+        # Make the API call for summary
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You must respond with a summary explanation based on provided data."},
+                    {"role": "user", "content": summary_prompt}
+                ],
+                max_tokens=300,  # Adjust tokens for summary response
+                temperature=0.7
+            )
+            summary = response.choices[0].message.content.strip()
+            print("Raw Response 1:", response)
+           #  summary = "Example explanation for particle movement." #this is for debug process
+        except Exception as e:
+            summary = f"Error generating summary: {e}"
+
+        return summary
+
 

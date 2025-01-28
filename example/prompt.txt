@@ -113,15 +113,6 @@ You are an intelligent agent controlling fish larvae in an ocean environment. Yo
 #### Task:
 1. **Decide the Next Movement**:
     - Determine the movement vector `(dx, dy, dz)` based on particle state, environmental conditions, and behavioral preferences.
-    - Specify:
-        - The swimming direction `(dx, dy)` and explain why.
-        - The vertical migration `(dz)` and explain why.
-
-2. **Generate an Explanation**:
-    - Include:
-        - What direction the particle swims `(dx=?, dy=?)` and the reasoning (e.g., moving toward suitable bathymetry or avoiding unsuitable conditions).
-        - What vertical migration it performs `(dz=?)` and the reasoning (e.g., adjusting depth to maintain proximity to suitable bathymetry or avoid settling prematurely).
-        - The current temperature value influencing the decision.
 
 #### Directional Rules:
 1. **Southwest**: `dx < 0`, `dy < 0`
@@ -135,19 +126,7 @@ You are an intelligent agent controlling fish larvae in an ocean environment. Yo
 
 **Important:**
 - Your response must adhere strictly to the format below. If the response deviates in any way, it will be discarded, and the agent will have to repeat the task.
-- Do not include any additional text, explanation, or commentary outside the specified structure.
-- First line must start with Movement Vector:
-- Second line must start with Explanation:
-
-#### Output Format(Must follow this form, do not say any other words, or repalce Movement Vector and Explanation with other words):
+#### Output Format(Must follow this form, do not say any other words, or repalce Movement Vector to other words):
 - Movement Vector: <dx>, <dy>, <dz>
-- Explanation: At step = <day>, swim direction `{direction}` (dx={dx}, dy={dy}), why,vertical migration (dz=?), temperature=<temp>°C, and explain  why based on the environment cues of flow temperature and z.
-
 #### Example Output:
-#### Example 1:
 - Movement Vector: -0.5, -0.2, -0.1
-- Explanation: At step = 3, swim direction southwest (dx=-0.5, dy=-0.2), vertical migration (dz=0.0000), temperature = 20°C, Flow: Strong westward flow aligns with the swimming direction to shallow place; Temperature: The larvae remain within the suitable temperature, no action needed; Depth:, a current depth of 25 ({z}) meters suitable for settlement, no action needed.
-
-#### Example 2:
-- Movement Vector: 0.0, -0.3, 0.1
-- Explanation: At step = 8, swim direction northeast (dx=0.1, dy=0.1), vertical migration (dz=0.00005), temperature = 15°C. Flow: Strong westward flow opposes the swimming direction, helping to prevent drifting too far from suitable habitats; Temperature: The temperature is too cold, prompting the larvae to move northward and ascend to find a more suitable temperature range; Depth:, the current depth of ({z}) is not suitable for settlement, so the larvae move westwardto locate deeper bathymetry.

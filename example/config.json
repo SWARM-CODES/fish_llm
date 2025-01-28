@@ -1,7 +1,7 @@
 {
     "api_key": "6b2flMrX3OqSmsD3ZQkQLRimXWvzAdf1ydRPpnCGGyuKNTbTAa4VJQQJ99ALACYeBjFXJ3w3AAABACOGwr5s",
     "azure_endpoint": "https://guhuwang.openai.azure.com/",
-    "api_version": "2023-05-15",
+    "api_version": "2024-10-21",
     "model": "gpt-4o"
 }
 

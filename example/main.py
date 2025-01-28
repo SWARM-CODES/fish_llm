@@ -12,6 +12,7 @@ from utilities import (
 )
 from llm_module import LLMBehaviorAPI
 from netCDF4 import Dataset
+from batchmake import estimate_batch_size, divide_particles_into_batches
 
 # Initialize environment
 x_dim = 50   # 50 grid points in x-direction
@@ -21,9 +22,15 @@ grid_resolution = 10
 sigma_layers = np.linspace(0, -1, z_dim)
 
 # Particle tracking setup
-num_particles, num_days, dt = 2, 10, 14400 #dt in seconds
+num_particles, num_days, dt = 10, 10, 14400 #dt in seconds
 steps_per_day = int(86400 / dt)
 total_steps = num_days * steps_per_day
+
+#estimating batch_size
+batch_size=5
+max_particles_per_batch = estimate_batch_size("prompt.txt", batch_size=batch_size)
+#particle_batches = divide_particles_into_batches(num_particles, max_particles_per_batch)
+
 
 domain_length_x, domain_length_y, domain_depth = 500, 500, 100
 
@@ -139,11 +146,11 @@ for ite in range(1, num_iterations + 1):
             history_states[i].append(history_entry)
 
         # Update particle behavior using LLM
-        particle_behavior, explanations = llm_api.update_particle_behavior(
-            particle_states, history_states
+        particle_behavior = llm_api.update_particle_behavior(
+                particle_states, history_states, batch_size
         )
-
-        iteration_explanations.extend(explanations)
+        explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
+        iteration_explanations.append(explanations)
 
         # Update particle trajectories with hydrodynamics and LLM behavior
         (
