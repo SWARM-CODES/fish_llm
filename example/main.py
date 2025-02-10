@@ -22,12 +22,12 @@ grid_resolution = 10
 sigma_layers = np.linspace(0, -1, z_dim)
 
 # Particle tracking setup
-num_particles, num_days, dt = 10, 10, 14400 #dt in seconds
+num_particles, num_days, dt = 100, 10, 14400 #dt in seconds
 steps_per_day = int(86400 / dt)
 total_steps = num_days * steps_per_day
 
 #estimating batch_size
-batch_size=5
+batch_size=10
 max_particles_per_batch = estimate_batch_size("prompt.txt", batch_size=batch_size)
 #particle_batches = divide_particles_into_batches(num_particles, max_particles_per_batch)
 
