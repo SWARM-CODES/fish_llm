@@ -170,6 +170,7 @@ class LLMBehaviorAPI:
                     response = self.call_llm_batch(self.client, self.model, batch_prompts)
                     for choice in response.choices:
                         response_text = choice.message.content.strip()
+                        print("Raw Response:", response_text)
                         try:
                      # Split and parse movement vector
                             lines = response_text.split("\n")
@@ -213,7 +214,7 @@ class LLMBehaviorAPI:
                 temperature=0.7
             )
             summary = response.choices[0].message.content.strip()
-            print("Raw Response 1:", response)
+           #  print("Raw Response 1:", response)
            #  summary = "Example explanation for particle movement." #this is for debug process
         except Exception as e:
             summary = f"Error generating summary: {e}"

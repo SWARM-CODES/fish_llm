@@ -22,12 +22,16 @@ grid_resolution = 10
 sigma_layers = np.linspace(0, -1, z_dim)
 
 # Particle tracking setup
-num_particles, num_days, dt = 100, 10, 14400 #dt in seconds
+num_particles, num_days, dt = 2, 10, 14400 #dt in seconds
 steps_per_day = int(86400 / dt)
 total_steps = num_days * steps_per_day
+user_ratio = 2 #define how many steps hydro run then run a agent
 
+settled_particles = np.zeros(num_particles, dtype=bool)
+cumulative_rewards = np.zeros_like(settled_particles, dtype=int)
+first_settlement_step = np.full(settled_particles.shape, -1)
 #estimating batch_size
-batch_size=10
+batch_size=1
 max_particles_per_batch = estimate_batch_size("prompt.txt", batch_size=batch_size)
 #particle_batches = divide_particles_into_batches(num_particles, max_particles_per_batch)
 
@@ -35,7 +39,7 @@ max_particles_per_batch = estimate_batch_size("prompt.txt", batch_size=batch_siz
 domain_length_x, domain_length_y, domain_depth = 500, 500, 100
 
 x_positions, y_positions, z_positions = initialize_particles(num_particles, domain_length_x, domain_length_y)
-trajectories_x, trajectories_y, trajectories_z, trajectories_bathy = initialize_trajectories(num_particles, total_steps)
+trajectories_x, trajectories_y, trajectories_z, trajectories_bathy, trajectories_temp = initialize_trajectories(num_particles, total_steps)
 
 
 
@@ -44,7 +48,7 @@ llm_api = LLMBehaviorAPI(config_path="config.json")
 
 # Run simulation
 target_locations = [(50, 441), (60, 411)]
-time_window = (48, 59) #(steps_per_day * 25, steps_per_day * 30)
+start_step, end_step = 48, 60
 
 particle_state = []
 history_states = []
@@ -65,12 +69,13 @@ with Dataset(trajectories_file, "w", format="NETCDF4") as nc_file:
     y_var = nc_file.createVariable("y", "f4", ("iteration", "particles", "times"))
     z_var = nc_file.createVariable("z", "f4", ("iteration", "particles", "times"))
     bathy_var = nc_file.createVariable("bathy", "f4", ("iteration", "particles", "times"))
-
+    temp_var = nc_file.createVariable("temperature", "f4", ("iteration", "particles", "times"))
     # Add attributes (optional)
     x_var.units = "km"
     y_var.units = "km"
     z_var.units = "m"
     bathy_var.units = "m"
+    temp_var.units = "\cric C degree"
     nc_file.description = "Trajectories of particles for all iterations"
     nc_file.history = "Created using Python NetCDF4 library"
     nc_file.source = "Particle tracking simulation"
@@ -84,6 +89,13 @@ for ite in range(1, num_iterations + 1):
     start_time = time.time()
 
     step_index = 0
+    #if not isinstance(x_positions, np.ndarray):
+    #    x_positions = np.array(x_positions)
+    #if not isinstance(y_positions, np.ndarray):
+    #    y_positions = np.array(y_positions)
+    #if not isinstance(z_positions, np.ndarray):
+    #    z_positions = np.array(z_positions)
+
     x_positions = x_positions.copy()
     y_positions = y_positions.copy()
     z_positions = z_positions.copy()
@@ -93,6 +105,7 @@ for ite in range(1, num_iterations + 1):
     trajectories_y[:, :] = np.nan
     trajectories_z[:, :] = np.nan
     trajectories_bathy[:, :] = np.nan
+    trajectories_temp[:, :] = np.nan
 
     x_positions, y_positions, z_positions = initialize_particles(num_particles, domain_length_x, domain_length_y)
     trajectories_x[:, 0] = x_positions
@@ -108,105 +121,112 @@ for ite in range(1, num_iterations + 1):
         counter+=1
         daily_u_velocity, daily_v_velocity, daily_w_velocity, temperature_field_with_noise, bathymetry = load_environment(counter-1)
 
+        for step in range(steps_per_day): 
+            # Get particle states
+            if step % user_ratio == 0:
+                particle_states = get_particle_states(
+                    x_positions,
+                    y_positions,
+                    z_positions,
+                    daily_u_velocity,
+                    daily_v_velocity,
+                    daily_w_velocity,
+                    temperature_field_with_noise,
+                    bathymetry,
+                    sigma_layers,
+                    domain_length_x,
+                    domain_length_y,
+                    domain_depth,
+                    x_dim,
+                    y_dim,
+                    z_dim,
+                    day,
+                )
 
-        # Get particle states
-        particle_states = get_particle_states(
-            x_positions,
-            y_positions,
-            z_positions,
-            daily_u_velocity,
-            daily_v_velocity,
-            daily_w_velocity,
-            temperature_field_with_noise,
-            bathymetry,
-            sigma_layers,
-            domain_length_x,
-            domain_length_y,
-            domain_depth,
-            x_dim,
-            y_dim,
-            z_dim,
-            day,
-        )
+                # Initialize history states and rewards if first iteration
+                if len(history_states) < num_particles:
+                    history_states.extend([[] for _ in range(num_particles)])
+                    trajectory_rewards.extend([[] for _ in range(num_particles)])
+                enabled_states = get_enabled_states()
+                # Update history states with particle information
+                for i in range(num_particles):
+                    particle_state = particle_states[i]
 
-        # Initialize history states and rewards if first iteration
-        if len(history_states) < num_particles:
-            history_states.extend([[] for _ in range(num_particles)])
-            trajectory_rewards.extend([[] for _ in range(num_particles)])
-        enabled_states = get_enabled_states()
-        # Update history states with particle information
-        for i in range(num_particles):
-            particle_state = particle_states[i]
+                # Dynamically create history entry for all enabled states
+                    history_entry = {"ite": ite}  # Add iteration number
+                    for key in enabled_states.keys():
+                        history_entry[key] = particle_state[key]
 
-        # Dynamically create history entry for all enabled states
-            history_entry = {"ite": ite}  # Add iteration number
-            for key in enabled_states.keys():
-                history_entry[key] = particle_state[key]
+                    history_states[i].append(history_entry)
 
-            history_states[i].append(history_entry)
+                # Update particle behavior using LLM
+                particle_behavior = llm_api.update_particle_behavior(
+                        particle_states, history_states, batch_size
+                )
+                explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
+                iteration_explanations.append(explanations)
 
-        # Update particle behavior using LLM
-        particle_behavior = llm_api.update_particle_behavior(
-                particle_states, history_states, batch_size
-        )
-        explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
-        iteration_explanations.append(explanations)
+            # Update particle trajectories with hydrodynamics and LLM behavior
+            (
+                trajectories_x,
+                trajectories_y,
+                trajectories_z,
+                trajectories_bathy,
+                trajectories_temp,
+                step_index,
+            ) = hydrodynamic_and_behavior_update(
+                num_particles,
+                dt,
+                daily_u_velocity,
+                daily_v_velocity,
+                daily_w_velocity,
+                temperature_field_with_noise,
+                x_positions,
+                y_positions,
+                z_positions,
+                particle_behavior,
+                bathymetry,
+                trajectories_x,
+                trajectories_y,
+                trajectories_z,
+                trajectories_bathy,
+                trajectories_temp,
+                domain_length_x,
+                domain_length_y,
+                domain_depth,
+                x_dim,
+                y_dim,
+                z_dim,
+                step_index,
+            )
 
-        # Update particle trajectories with hydrodynamics and LLM behavior
-        (
-            trajectories_x,
-            trajectories_y,
-            trajectories_z,
-            trajectories_bathy,
-            step_index,
-        ) = hydrodynamic_and_behavior_update(
-            num_particles,
-            steps_per_day,
-            dt,
-            daily_u_velocity,
-            daily_v_velocity,
-            daily_w_velocity,
-            x_positions,
-            y_positions,
-            z_positions,
-            particle_behavior,
-            bathymetry,
-            trajectories_x,
-            trajectories_y,
-            trajectories_z,
-            trajectories_bathy,
-            domain_length_x,
-            domain_length_y,
-            domain_depth,
-            x_dim,
-            y_dim,
-            z_dim,
-            step_index,
-        )
-        
-        # Calculate rewards based on the simulation
-    #rewards = reward_function_1(
-    #    trajectories_x,
-    #    trajectories_y,
-    #    trajectories_z,
-    #    bathymetry,
-    #    time_window,
-    #    target_locations,
-    #)
-    rewards = reward_function_2(
-        trajectories_x,
-        trajectories_y,
-        trajectories_z,
-        temperature_field_with_noise,
-        bathymetry,
-        sigma_layers,
-        time_window,
-        domain_length_x, 
-        domain_length_y, 
-        x_dim, 
-        y_dim,
-        z_dim,
-    )
+            if start_step <= step_index <= end_step:
+                rewards = reward_function_2(
+                    trajectories_x[:, step_index-1],  # Position at the current step
+                    trajectories_y[:, step_index-1],
+                    trajectories_z[:, step_index-1],
+                    trajectories_temp[:, step_index-1],
+                    trajectories_bathy[:, step_index-1]
+                )
+                new_settled = (rewards == 1) & (first_settlement_step == -1)  # Newly settled particles
+                first_settlement_step[new_settled] = step_index  # Store the first settlement step
+                cumulative_rewards += rewards
+            settled_particles = cumulative_rewards >= 1  # Element-wise OR to update the mask
+
+            # Get indices of settled particles
+            settled_indices = np.where(settled_particles)[0]
+
+            # Freeze positions of settled particles (Only update if there are settled particles)
+            if settled_indices.size > 0:
+                print(f"Rewards: {cumulative_rewards}")
+                first_step = first_settlement_step[settled_indices]
+                x_positions[settled_indices] = trajectories_x[settled_indices, first_step-1].flatten()
+                y_positions[settled_indices] = trajectories_y[settled_indices, first_step-1].flatten()
+                z_positions[settled_indices] = trajectories_z[settled_indices, first_step-1].flatten()
+
+                trajectories_x[settled_indices, step_index-1] = x_positions[settled_indices]
+                trajectories_y[settled_indices, step_index-1] = y_positions[settled_indices]
+                trajectories_z[settled_indices, step_index-1] = z_positions[settled_indices]
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Iteration {ite} completed in {elapsed_time:.2f} seconds.")
@@ -215,7 +235,7 @@ for ite in range(1, num_iterations + 1):
         trajectory_rewards[i].append(rewards[i])
         history_states[i][-1]["reward"] = rewards[i]
 
-    print(f"Iteration {ite} complete. Rewards: {rewards}")
+   # print(f"Iteration {ite} complete. Rewards: {rewards}")
 
     # Save iteration-specific explanations
     explanations_file = f"iteration_{ite}_explanations.json"
@@ -230,11 +250,12 @@ for ite in range(1, num_iterations + 1):
         y_var = nc_file.variables["y"]
         z_var = nc_file.variables["z"]
         bathy_var = nc_file.variables["bathy"]
+        temp_var = nc_file.variables["temperature"]
         x_var[ite-1, :, :] = trajectories_x
         y_var[ite-1, :, :] = trajectories_y
         z_var[ite-1, :, :] = trajectories_z
         bathy_var[ite-1, :, :] = trajectories_bathy
-
+        temp_var[ite-1, :, :] = trajectories_temp
 
 
 # End of simulation

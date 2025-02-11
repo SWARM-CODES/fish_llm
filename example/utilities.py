@@ -53,6 +53,15 @@ def get_particle_velocity(x, y, z, daily_u_velocity, daily_v_velocity, daily_w_v
 
     return u_vel, v_vel, w_vel
 
+def get_particle_temp(x, y, z, daily_temp, domain_depth, x_dim, y_dim, z_dim):
+    x_idx = min(max(int(x / 10), 0), x_dim - 1)  # Clamp x index
+    y_idx = min(max(int(y / 10), 0), y_dim - 1)  # Clamp y index
+    z_idx = min(max(int(z / -domain_depth * z_dim), 0), z_dim - 1)  # Clamp z index
+    
+    temp_vel = daily_temp[x_idx, y_idx, z_idx]
+
+    return temp_vel
+
 def get_bathymetry(x, y, bathymetry, domain_length_x, domain_length_y, x_dim, y_dim):
     x_idx = min(max(int(x / (domain_length_x / x_dim)), 0), x_dim - 1)  # Clamp x index
     y_idx = min(max(int(y / (domain_length_y / y_dim)), 0), y_dim - 1)  # Clamp y index
@@ -115,14 +124,13 @@ def get_particle_states(
 
     return particle_states
 def hydrodynamic_and_behavior_update(
-    num_particles, steps_per_day, dt, daily_u_velocity, daily_v_velocity, daily_w_velocity,
+    num_particles, dt, daily_u_velocity, daily_v_velocity, daily_w_velocity, daily_temp,
     x_positions, y_positions, z_positions, particle_behavior, bathymetry,
-    trajectories_x, trajectories_y, trajectories_z, trajectories_bathy,
+    trajectories_x, trajectories_y, trajectories_z, trajectories_bathy, trajectories_temp, 
     domain_length_x, domain_length_y, domain_depth, x_dim, y_dim, z_dim, step_index
 ):
     #step_index = 0
 
-    for step in range(steps_per_day):
         for i in range(num_particles):
             # Current particle positions
             x_pos, y_pos, z_pos = x_positions[i], y_positions[i], z_positions[i]
@@ -132,6 +140,9 @@ def hydrodynamic_and_behavior_update(
                 x_pos, y_pos, z_pos, daily_u_velocity, daily_v_velocity, daily_w_velocity,
                 domain_depth, x_dim, y_dim, z_dim
             )
+
+          
+            trajectories_temp[i, step_index] = get_particle_temp(x_pos, y_pos, z_pos, daily_temp, domain_depth, x_dim, y_dim, z_dim)
 
             dx_env = u_vel * dt / 1000
             dy_env = v_vel * dt / 1000
@@ -159,7 +170,7 @@ def hydrodynamic_and_behavior_update(
 
         step_index += 1
 
-    return trajectories_x, trajectories_y, trajectories_z, trajectories_bathy, step_index
+        return trajectories_x, trajectories_y, trajectories_z, trajectories_bathy,trajectories_temp, step_index
 def get_enabled_states():
     from ptrajstates_config import PARTICLE_STATE_CONFIG
     return {
