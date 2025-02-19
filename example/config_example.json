@@ -1,0 +1,7 @@
+{
+    "api_key": "yourapikey",
+    "azure_endpoint": "yourLLM",
+    "api_version": "yourversion",
+    "model": "youtmodel"
+}
+

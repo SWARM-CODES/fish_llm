@@ -19,8 +19,8 @@ do
         echo "Simulation run $i completed successfully."
 
         # Move and rename the output files
-        mv iteration_1_explanations.json output/iteration_${i}_explanations.json
-        mv trajectories.nc output/trajectories_${i}.nc
+        mv iteration_1_explanations.json output_mechanism/output_onlyRheotaxis/iteration_${i}_explanations.json
+        mv trajectories.nc output_mechanism/output_onlyRheotaxis/trajectories_${i}.nc
 
         echo "Files for run $i moved to output directory."
     else

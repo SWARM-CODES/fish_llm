@@ -5,7 +5,7 @@ from netCDF4 import Dataset
 x_dim = 50   # 50 grid points in x-direction
 y_dim = 50   # 50 grid points in y-direction
 z_dim = 20   # 20 sigma layers
-grid_resolution = 10  # 10 km resolution per grid cell
+grid_resolution = 10  # 1 km resolution per grid cell
 num_days = 30  # Number of days for simulation
 
 # Define velocity and bathymetry parameters
@@ -75,7 +75,7 @@ def setup_environment():
             temperature_field[j, i, :] =  np.linspace(surface_temps[i], bottom_temps[i], z_dim)
     noise = np.random.uniform(-1, 1, (y_dim, x_dim, z_dim))
     temperature_field = temperature_field + noise
-    temperature_field[0:15, 0:15, :] -= 5  
+    #temperature_field[0:15, 0:15, :] -= 5  
 
     # Save environment data to a NetCDF file
     with Dataset("environment_data.nc", "w", format="NETCDF4") as nc:

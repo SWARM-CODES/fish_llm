@@ -10,6 +10,7 @@ from utilities import (
     hydrodynamic_and_behavior_update,
     load_environment,
 )
+from mechanism_module import MechanismBehavior
 from llm_module import LLMBehaviorAPI
 from netCDF4 import Dataset
 from batchmake import estimate_batch_size, divide_particles_into_batches
@@ -22,7 +23,7 @@ grid_resolution = 10
 sigma_layers = np.linspace(0, -1, z_dim)
 
 # Particle tracking setup
-num_particles, num_days, dt = 2, 10, 14400 #dt in seconds
+num_particles, num_days, dt = 20, 10, 14400 #dt in seconds
 steps_per_day = int(86400 / dt)
 total_steps = num_days * steps_per_day
 user_ratio = 2 #define how many steps hydro run then run a agent
@@ -45,10 +46,15 @@ trajectories_x, trajectories_y, trajectories_z, trajectories_bathy, trajectories
 
 # Initialize LLM API
 llm_api = LLMBehaviorAPI(config_path="config.json")
+mechanism_model = MechanismBehavior()
+
 
 # Run simulation
-target_locations = [(50, 441), (60, 411)]
+detection_radius = 15
+reef_locations = np.loadtxt("reef_location.txt")
+target_locations = [(x, y) for x, y in reef_locations]
 start_step, end_step = 48, 60
+time_window = [start_step, end_step]
 
 particle_state = []
 history_states = []
@@ -70,12 +76,15 @@ with Dataset(trajectories_file, "w", format="NETCDF4") as nc_file:
     z_var = nc_file.createVariable("z", "f4", ("iteration", "particles", "times"))
     bathy_var = nc_file.createVariable("bathy", "f4", ("iteration", "particles", "times"))
     temp_var = nc_file.createVariable("temperature", "f4", ("iteration", "particles", "times"))
+    reward_var = nc_file.createVariable("reward", "i4", ("iteration", "particles"))
     # Add attributes (optional)
     x_var.units = "km"
     y_var.units = "km"
     z_var.units = "m"
     bathy_var.units = "m"
     temp_var.units = "\cric C degree"
+    reward_var.units = "binary"
+    reward_var.description = ">1 successfully settled, 0 = not settled"
     nc_file.description = "Trajectories of particles for all iterations"
     nc_file.history = "Created using Python NetCDF4 library"
     nc_file.source = "Particle tracking simulation"
@@ -158,13 +167,15 @@ for ite in range(1, num_iterations + 1):
                         history_entry[key] = particle_state[key]
 
                     history_states[i].append(history_entry)
+                # Update behavior using mechanism based model
+                particle_behavior= mechanism_model.mechanism_particle_behavior(particle_states, target_locations, detection_radius)
 
                 # Update particle behavior using LLM
-                particle_behavior = llm_api.update_particle_behavior(
-                        particle_states, history_states, batch_size
-                )
-                explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
-                iteration_explanations.append(explanations)
+                #particle_behavior = llm_api.update_particle_behavior(
+                #        particle_states, history_states, batch_size
+                #)
+                #explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
+                #iteration_explanations.append(explanations)
 
             # Update particle trajectories with hydrodynamics and LLM behavior
             (
@@ -201,13 +212,22 @@ for ite in range(1, num_iterations + 1):
             )
 
             if start_step <= step_index <= end_step:
-                rewards = reward_function_2(
-                    trajectories_x[:, step_index-1],  # Position at the current step
-                    trajectories_y[:, step_index-1],
-                    trajectories_z[:, step_index-1],
-                    trajectories_temp[:, step_index-1],
-                    trajectories_bathy[:, step_index-1]
+
+                rewards = reward_function_1(trajectories_x[:, step_index-1], 
+                    trajectories_y[:, step_index-1], 
+                    trajectories_z[:, step_index-1], 
+                    trajectories_bathy[:, step_index-1], 
+                    time_window,
+                    target_locations, 
                 )
+
+                #rewards = reward_function_2(
+                #    trajectories_x[:, step_index-1],  # Position at the current step
+                #    trajectories_y[:, step_index-1],
+                #    trajectories_z[:, step_index-1],
+                #    trajectories_temp[:, step_index-1],
+                #    trajectories_bathy[:, step_index-1]
+                #)
                 new_settled = (rewards == 1) & (first_settlement_step == -1)  # Newly settled particles
                 first_settlement_step[new_settled] = step_index  # Store the first settlement step
                 cumulative_rewards += rewards
@@ -251,12 +271,13 @@ for ite in range(1, num_iterations + 1):
         z_var = nc_file.variables["z"]
         bathy_var = nc_file.variables["bathy"]
         temp_var = nc_file.variables["temperature"]
+        reward_var = nc_file.variables["reward"]
         x_var[ite-1, :, :] = trajectories_x
         y_var[ite-1, :, :] = trajectories_y
         z_var[ite-1, :, :] = trajectories_z
         bathy_var[ite-1, :, :] = trajectories_bathy
         temp_var[ite-1, :, :] = trajectories_temp
-
+        reward_var[ite - 1, :] = cumulative_rewards  
 
 # End of simulation
 # Save explanations to a JSON file
