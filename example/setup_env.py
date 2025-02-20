@@ -40,7 +40,40 @@ def create_daily_velocity_fields(u_velocity_climatology, day, num_days, v_max_va
     daily_w_velocity = np.zeros_like(u_velocity_climatology)
 
     return daily_u_velocity, daily_v_velocity, daily_w_velocity
+def calculate_signal_map(X, Y, reef_locations, threshold=15, decay_factor=-0.20):
+    """
+    Calculate the average signal strength at each grid point due to coral reef influence.
 
+    Parameters:
+        X, Y: 2D meshgrid of x, y coordinates.
+        reef_locations: List of (x, y) coordinates of reef locations.
+        threshold: Distance beyond which the signal rapidly decays (~15 km).
+        decay_factor: Controls the rate of exponential decay.
+
+    Returns:
+        signal_map: 2D array with the averaged signal strength at each grid point.
+    """
+    signal_map = np.zeros_like(X, dtype=float)
+    #weight_sum = np.zeros_like(X, dtype=float)  # To count contributing reefs at each grid point
+
+    for reef_x, reef_y in reef_locations:
+        # Compute Euclidean distance from each grid point to the reef location
+        distances = np.sqrt((X - reef_x) ** 2 + (Y - reef_y) ** 2)
+
+        # Apply diffusive decay function
+        signal = np.exp(decay_factor * distances)
+
+        #weights = np.exp(-distances)
+        #weights[distances > threshold] = 0
+        signal_map = np.maximum(signal_map, signal)
+        # Sum up contributions and track the number of reefs affecting each point
+       # signal_map += signal * weights
+       # weight_sum += weights
+
+    # Compute the average signal by dividing by the number of contributors
+    #signal_map[weight_sum > 0] /= weight_sum[weight_sum > 0]
+
+    return signal_map
 
 def setup_environment():
     """
@@ -56,6 +89,12 @@ def setup_environment():
     bathymetry = np.tile(depth, (y_dim, 1))
     z = np.array([bathymetry * sigma for sigma in sigma_layers])
     x_grid, y_grid, z_grid = np.meshgrid(x, y, sigma_layers, indexing='xy')
+   
+    reef_locations = np.loadtxt("reef_location.txt") 
+    signal_map = calculate_signal_map(x_grid[:, :, 0], y_grid[:, :, 0], reef_locations)
+    #print(signal_map.shape)  # Expected output: (50, 50)
+
+
     # Create initial u_velocity (base velocity without time variation)
     u_velocity_climatology = np.zeros((x_dim, y_dim, z_dim))
     for k in range(z_dim):
@@ -94,6 +133,7 @@ def setup_environment():
         w_var = nc.createVariable("w_velocity", "f4", ("time", "y", "x", "z"))
         temp_var = nc.createVariable("temperature", "f4", ("time", "y", "x", "z"))
         bathy_var = nc.createVariable("bathymetry", "f4", ("y", "x"))
+        coral_var = nc.createVariable("coral_signal", "f4", ("y", "x"))
         x_grid_var = nc.createVariable("x_grid", "f4", ("y", "x", "z"))
         y_grid_var = nc.createVariable("y_grid", "f4", ("y", "x", "z"))
         z_grid_var = nc.createVariable("z_grid", "f4", ("y", "x", "z"))
@@ -116,6 +156,7 @@ def setup_environment():
 
         # Save static fields
         bathy_var[:, :] = bathymetry
+        coral_var[:, :] = signal_map
         x_grid_var[:, :, :] = x_grid
         y_grid_var[:, :, :] = y_grid
         z_grid_var[:, :, :] = z_grid

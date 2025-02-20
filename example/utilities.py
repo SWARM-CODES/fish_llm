@@ -13,14 +13,15 @@ def load_environment(day):
         w_velocity = nc.variables["w_velocity"][day, :, :, :]
         temperature = nc.variables["temperature"][day, :, :, :]
         bathymetry = nc.variables["bathymetry"][:, :]
-
+        coral_signal = nc.variables["coral_signal"][:, :]
         # Transform from (y,x) to (x,y)
         u_velocity = np.transpose(u_velocity, (1, 0, 2))
         v_velocity = np.transpose(v_velocity, (1, 0, 2))
         w_velocity = np.transpose(w_velocity, (1, 0, 2))
         temperature = np.transpose(temperature, (1, 0, 2))
         bathymetry = np.transpose(bathymetry, (1, 0))
-    return u_velocity, v_velocity, w_velocity, temperature, bathymetry
+        coral_signal = np.transpose(coral_signal, (1, 0))
+    return u_velocity, v_velocity, w_velocity, temperature, bathymetry, coral_signal
 
 
 def apply_boundary_conditions(x_pos, y_pos, z_pos, depth_pos, domain_length_x, domain_length_y):
@@ -72,7 +73,7 @@ def get_bathymetry(x, y, bathymetry, domain_length_x, domain_length_y, x_dim, y_
 def get_particle_states(
     x_positions, y_positions, z_positions,
     u_velocity, v_velocity, w_velocity,
-    temperature_field_with_noise, bathymetry, sigma_layers,
+    temperature_field_with_noise, bathymetry, coral_signal, sigma_layers,
     domain_length_x, domain_length_y, domain_depth, x_dim, y_dim, z_dim, day
 ):
     enabled_states = get_enabled_states()
@@ -111,6 +112,8 @@ def get_particle_states(
             state["bathymetry"] = -bathymetry_depth
         z_idx = int((z / bathymetry_depth) * z_dim)
         z_idx = max(0, min(z_idx, z_dim - 1))
+        if "coral_signal" in enabled_states:
+            state["coral_signal"] = coral_signal[x_idx, y_idx]
 
         if "temperature" in enabled_states:
             temperature = temperature_field_with_noise[x_idx, y_idx, z_idx]

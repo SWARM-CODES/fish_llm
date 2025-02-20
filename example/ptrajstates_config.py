@@ -7,6 +7,7 @@ PARTICLE_STATE_CONFIG = {
     "w": {"default": 0.0, "enabled": True},  # W velocity
     "temperature": {"default": 0.0, "enabled": True},  # Temperature
     "bathymetry": {"default": 0.0, "enabled": True},  # Bathymetry depth
+    "coral_signal": {"default": 0.0, "enabled": True},
     "day": {"default": 0.0, "enabled": True},
     # Add more states here as needed
 }

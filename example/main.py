@@ -128,7 +128,7 @@ for ite in range(1, num_iterations + 1):
         # Generate daily velocity fields
         #if day % 6 == 0:
         counter+=1
-        daily_u_velocity, daily_v_velocity, daily_w_velocity, temperature_field_with_noise, bathymetry = load_environment(counter-1)
+        daily_u_velocity, daily_v_velocity, daily_w_velocity, temperature_field_with_noise, bathymetry, coral_signal = load_environment(counter-1)
 
         for step in range(steps_per_day): 
             # Get particle states
@@ -142,6 +142,7 @@ for ite in range(1, num_iterations + 1):
                     daily_w_velocity,
                     temperature_field_with_noise,
                     bathymetry,
+                    coral_signal,
                     sigma_layers,
                     domain_length_x,
                     domain_length_y,
@@ -168,14 +169,14 @@ for ite in range(1, num_iterations + 1):
 
                     history_states[i].append(history_entry)
                 # Update behavior using mechanism based model
-                particle_behavior= mechanism_model.mechanism_particle_behavior(particle_states, target_locations, detection_radius)
+                #particle_behavior= mechanism_model.mechanism_particle_behavior(particle_states, target_locations, detection_radius)
 
                 # Update particle behavior using LLM
-                #particle_behavior = llm_api.update_particle_behavior(
-                #        particle_states, history_states, batch_size
-                #)
-                #explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
-                #iteration_explanations.append(explanations)
+                particle_behavior = llm_api.update_particle_behavior(
+                        particle_states, history_states, batch_size
+                )
+                explanations = llm_api.summarize_movements(particle_states, history_states, particle_behavior)
+                iteration_explanations.append(explanations)
 
             # Update particle trajectories with hydrodynamics and LLM behavior
             (

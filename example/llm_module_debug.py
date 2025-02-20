@@ -172,6 +172,9 @@ class LLMBehaviorAPI:
 
             # Format the prompt
                prompt = self.generate_prompt(particle_state, history_str, prompt_path)
+               print("\n===== Generated Prompt =====\n")
+               print(prompt)
+               print("\n===========================\n")
             #   batch_prompts.append({"role": "user", "content": prompt})
 
             # Make API call with retries
