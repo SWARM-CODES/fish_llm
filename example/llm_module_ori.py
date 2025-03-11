@@ -25,6 +25,7 @@ class LLMBehaviorAPI:
     def generate_dynamic_particle_state(self, particle_state):
         state_lines = []
         for key, value in particle_state.items():
+
             # Customize formatting for specific states
             if key == "x":
                 state_lines.append(f"- Position:\n    - X (East-West, km): {value:.2f} km")
@@ -37,16 +38,17 @@ class LLMBehaviorAPI:
             elif key == "v":
                 state_lines.append(f"    - V (North-South speed, m/s): {value:.2f} m/s")
             elif key == "w":
-                state_lines.append(f"    - W (Vertical speed, m/s): {value:.2f} m/s")
+                state_lines.append(f"    - W (Vertical speed, m/s): {value:.3e} m/s")
             elif key == "temperature":
                 state_lines.append(f"- Current Temperature: {value:.2f} °C")
             elif key == "bathymetry":
                 state_lines.append(f"- Bathymetry Depth: {value:.2f} m")
             elif key == "day":
                 state_lines.append(f"- day: {value:.2f} m")
+            elif key == "coral_signal":
+                state_lines.append(f"- coral_signal: {value:.3e} ")
             else:
                 state_lines.append(f"- {key.capitalize()}: {value:.2f}")
-
         return "\n".join(state_lines)
     def generate_prompt(self, particle_state, history_str, base_prompt_path):
     
@@ -60,7 +62,6 @@ class LLMBehaviorAPI:
         # Replace placeholders in the template
         prompt = base_prompt.replace("{dynamic_particle_state}", dynamic_particle_state)
         prompt = prompt.replace("{history_str}", history_str)
-
         return prompt
     def call_llm_batch(self, client, model, batch_prompts):
         """
@@ -101,7 +102,7 @@ class LLMBehaviorAPI:
                 history_str = "\n".join(
                     [
                         f"    Iteration {entry['ite']}: "
-                        + ", ".join([f"{key.capitalize()}={entry[key]:.2f}" for key in entry if key != "ite"])
+                        + ", ".join([f"{key.capitalize()}={entry[key]:.3e}" for key in entry if key != "ite"])
                         for entry in history_states[i]
                     ]
                 )
@@ -154,7 +155,7 @@ class LLMBehaviorAPI:
             # Generate particle history string
                history_str = "\n".join([
                    f"Iteration {entry['ite']}, Step {idx + 1}: "
-                   + ", ".join([f"{key.capitalize()}={entry[key]:.2f}" for key in entry if key != "ite"])
+                   + ", ".join([f"{key.capitalize()}={entry[key]:.3e}" for key in entry if key != "ite"])
                    for idx, entry in enumerate(particle_history)
                ])
 
