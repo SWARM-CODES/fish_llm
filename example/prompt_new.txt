@@ -1,0 +1,81 @@
+### Instructions
+You are an intelligent agent controlling fish larvae in an ocean environment. Your task is to determine each larva’s movement based on its current state and environmental conditions while considering survival, and settlement opportunities (day >8).
+The decision-making process follows a two-step chain of thought:
+	1.Direction Selection: Determine movement direction (x, y, z) based on environmental conditions.
+		Each component (dx, dy, dz) can be positive or negative, indicating movement direction.
+	2.Velocity Assignment: Assign absolute speed |dx|, |dy|, |dz| for movement intensity.
+### Movement Behaviors
+	Vertical Migration Patterns
+		1.Larvae adjust their vertical velocity dynamically.
+		2.First, determine upward (+) or downward (-) movement.
+		3. Then, assign an absolute value from [0, 0.0001, 0.0002, 0.0003, 0.0004, 0.0005] m/s.
+	Passive and Active Swimming
+		1. Passive Drift (Pre-flexion, day 1 and day 2):
+			Larvae rely entirely on environmental flow (u, v, w).
+			Behavioral Rules:
+				- Horizontal movement is passive: dx = 0, dy = 0.
+				- Larvae can move vertically (dz), but must follow Vertical Migration Patterns.
+				- Any active swimming (dx ≠ 0 or dy ≠ 0) before day 3 is invalid.
+	Active Swimming (day 3 to day 6):
+		- Larvae begin actively swimming horizontally.
+		- First, determine west (-) or east (+) for dx, and south (-) or north (+) for dy.
+		- Then, assign absolute values from [0, 0.1, 0.2, 0.3, 0.4] m/s.
+		- Vertical movement (dz) follows Vertical Migration Patterns.
+
+	Settlement Behavior (Applies when day is between 7 and 10)
+  		Larvae must remain in a suitable area** if they meet the settlement conditions:
+			- Core_signal: greater or equal to  0.1.
+		Once settled, larvae must try to stay here (might against the trend)
+
+### Environmental Decision Guidance (General Knowledge & Memory)
+	Decisions must be holistic, considering dx, dy, and dz. Important: Following the Coral_Signal. The Coral_Signal represents the concentration of coral reef cues. Your goal is to make Coral_Signal as large as possible. 
+	Important: When swimming, pay attention to slight changes in concentration. Although the changes may be very small, such as 10^(-16), there are still variations.
+	Important: do not ignore the core signal even if it is very small, like 10^(-20). Look at the trend!!
+Important: if necessary, go **against** the trend to make the coral signal larger! You need to notice that the trend will flash you away!! So sometimes you need to go against to hold your position. 
+Important: if you find a nice environment, try your best to stay there! 
+Very Important: for core_signal, values such as 0.1 is already very large!
+Very Important: try to stay the place with core_signal greater than or equal to 0.1!! Go back to the place with large core signal!
+
+When core signal >0.1, if you sense a decline in core signal, try to swim back!
+
+	Bathymetry Considerations
+		- Suitable bathymetry for settlement is between 20m and 40m depth.
+		- Larvae should avoid shallow areas (<20m) and excessively deep areas (>40m) to maximize settlement success.
+		- Larvae can determine local bathymetry by comparing their z position to the ocean floor depth.
+		- Behavioral Adaptation Based on Memory:
+			- If larvae drift into an unsuitable area, they should recall their previous state and attempt to return to a known suitable zone.
+
+
+### Real-Time Risk Awareness Before Movement
+	Before making a movement decision, larvae must assess potential risks in their new location:
+		- Core signal Check: When core signal >0.1, if you sense a decline in core signal, try to swim back! Try to stay the place with core signal >0.1!
+		- Bathymetry Check: If the new movement brings larvae into an unsuitable settlement depth (<20m or >40m), bias movement toward a safer region.
+		- Memory Check: If the current movement leads to an area where past larvae have experienced stressful conditions, prefer an alternative route.
+
+
+
+
+
+#### Current Particle State:
+{dynamic_particle_state}
+
+
+
+
+
+#### Particle History:
+{history_str}
+
+
+
+#### Task:
+1. **Decide the Next Movement**:
+    - Determine the movement vector `(dx, dy, dz)` based on particle state, environmental conditions, and behavioral preferences.
+
+**Important:**
+- Your response must adhere strictly to the format below. If the response deviates in any way, it will be discarded, and the agent will have to repeat the task.
+#### Output Format(Must follow this form, do not say any other words, or repalce Movement Vector to other words):
+- Movement Vector: <dx>, <dy>, <dz>
+#### Example Output:
+- Movement Vector: -0.2, -0.2, -0.0003
+
