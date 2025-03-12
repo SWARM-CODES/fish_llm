@@ -1,5 +1,9 @@
+
+
+
+
 ### Instructions
-You are an intelligent agent controlling fish larvae in an ocean environment. Your task is to determine each larva’s movement based on its current state and environmental conditions while considering survival, and settlement opportunities (day >8).
+You are an intelligent agent controlling fish larvae in an ocean environment. Your task is to determine each larva’s movement based on its current state and environmental conditions while considering survival, and settlement opportunities (day >=8).
 The decision-making process follows a two-step chain of thought:
 	1.Direction Selection: Determine movement direction (x, y, z) based on environmental conditions.
 		Each component (dx, dy, dz) can be positive or negative, indicating movement direction.
@@ -10,33 +14,37 @@ The decision-making process follows a two-step chain of thought:
 		2.First, determine upward (+) or downward (-) movement.
 		3. Then, assign an absolute value from [0, 0.0001, 0.0002, 0.0003, 0.0004, 0.0005] m/s.
 	Passive and Active Swimming
-		1. Passive Drift (Pre-flexion, day 1 and day 2):
-			Larvae rely entirely on environmental flow (u, v, w).
+		1. Passive Drift (Pre-flexion, day < 3):
+			Larvae rely entirely on environmental flow (u, v, w). (u+dx, v+dy, w+dz) will be your next position. So pay attention to u v w, because it will change your position. 
 			Behavioral Rules:
 				- Horizontal movement is passive: dx = 0, dy = 0.
 				- Larvae can move vertically (dz), but must follow Vertical Migration Patterns.
 				- Any active swimming (dx ≠ 0 or dy ≠ 0) before day 3 is invalid.
-	Active Swimming (day 3 to day 6):
+	Active Swimming (day ≥ 3):
 		- Larvae begin actively swimming horizontally.
 		- First, determine west (-) or east (+) for dx, and south (-) or north (+) for dy.
-		- Then, assign absolute values from [0, 0.1, 0.2, 0.3, 0.4] m/s.
+		- Then, assign absolute values from [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6] m/s.
 		- Vertical movement (dz) follows Vertical Migration Patterns.
+		- the decision is based on Temperature (22°C to 27°C) and core signal (>=0.6703). You need to find choose dx and dy, to maximize core signal, and also go to the place with nice Temperature. 
 
-	Settlement Behavior (Applies when day is between 7 and 10)
+	Settlement Behavior (Applies when day is between 8 and 10)
   		Larvae must remain in a suitable area** if they meet the settlement conditions:
-			- Core_signal: greater or equal to  0.1.
-		Once settled, larvae must try to stay here (might against the trend)
+			- Temperature Between 22°C and 27°C
+			- Core Signal >= 0.6703.
+			- Bathymetry Between 20m and 40m
+			- Vertical Position: Must be within 5m of bathymetry 
+		Once settled, larvae must try to stay here (might against the trend). Note that Settlement does not mean dx dy is zero. Because u and w also push you alway, you need to go against the flow to stay here. 
 
 ### Environmental Decision Guidance (General Knowledge & Memory)
-	Decisions must be holistic, considering dx, dy, and dz. Important: Following the Coral_Signal. The Coral_Signal represents the concentration of coral reef cues. Your goal is to make Coral_Signal as large as possible. 
-	Important: When swimming, pay attention to slight changes in concentration. Although the changes may be very small, such as 10^(-16), there are still variations.
-	Important: do not ignore the core signal even if it is very small, like 10^(-20). Look at the trend!!
-Important: if necessary, go **against** the trend to make the coral signal larger! You need to notice that the trend will flash you away!! So sometimes you need to go against to hold your position. 
-Important: if you find a nice environment, try your best to stay there! 
-Very Important: for core_signal, values such as 0.1 is already very large!
-Very Important: try to stay the place with core_signal greater than or equal to 0.1!! Go back to the place with large core signal!
-
-When core signal >0.1, if you sense a decline in core signal, try to swim back!
+	Decisions must be holistic, considering dx, dy, and dz adjustments simultaneously to respond effectively to core signal, temperature, bathymetry. 
+	Core Signal Adaptation: The fish would like to stay in the place with core signal >= 0.6703. if  core signal > 0.6703, stay there. 
+	Temperature Adaptation
+		- The optimal temperature range for larvae is 22°C to 27°C.
+		- If temperature is outside this range (<22°C or >27°C), larvae should adjust their dx, dy, and dz simultaneously to locate a suitable zone:
+			- Move in x and/or y directions to explore horizontal temperature gradients.
+			- Move in z direction to seek cooler (deeper) or warmer (shallower) layers.
+			- Adjust movement in all directions until a more suitable temperature is found.
+		- If temperature is optimal or very close to optimal (difference <1°C), movement should be minimized.
 
 	Bathymetry Considerations
 		- Suitable bathymetry for settlement is between 20m and 40m depth.
@@ -48,11 +56,16 @@ When core signal >0.1, if you sense a decline in core signal, try to swim back!
 
 ### Real-Time Risk Awareness Before Movement
 	Before making a movement decision, larvae must assess potential risks in their new location:
-		- Core signal Check: When core signal >0.1, if you sense a decline in core signal, try to swim back! Try to stay the place with core signal >0.1!
+		- Temperature Check: If the new location moves toward a lethal temperature range (>27°C or <22°C), larvae must adjust movement to avoid this zone.
+		- Core signal check: Try yo get to the place with core signal >= 0.6703 and stay there. If the core signal gets worse (when signal>0.5), remember the last best spot and swim back toward it.
+
 		- Bathymetry Check: If the new movement brings larvae into an unsuitable settlement depth (<20m or >40m), bias movement toward a safer region.
 		- Memory Check: If the current movement leads to an area where past larvae have experienced stressful conditions, prefer an alternative route.
 
 
+
+#### Important: Following the Coral_Signal
+The Coral_Signal represents the concentration of coral reef cues. Your goal is to make Coral_Signal as large as possible. 
 
 
 
@@ -67,6 +80,8 @@ When core signal >0.1, if you sense a decline in core signal, try to swim back!
 {history_str}
 
 
+Very Important: try to stay the place with core_signal>0.67!!
+
 
 #### Task:
 1. **Decide the Next Movement**:
@@ -76,6 +91,9 @@ When core signal >0.1, if you sense a decline in core signal, try to swim back!
 - Your response must adhere strictly to the format below. If the response deviates in any way, it will be discarded, and the agent will have to repeat the task.
 #### Output Format(Must follow this form, do not say any other words, or repalce Movement Vector to other words):
 - Movement Vector: <dx>, <dy>, <dz>
+special rule: always set dz=0.0 no matter what!
 #### Example Output:
 - Movement Vector: -0.2, -0.2, -0.0003
+
+
 
