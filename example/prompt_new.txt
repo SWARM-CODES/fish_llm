@@ -1,9 +1,17 @@
 
 
+#### Current Particle State:
+{dynamic_particle_state}
 
+
+
+
+
+#### Particle History:
+{history_str}
 
 ### Instructions
-You are an intelligent agent controlling fish larvae in an ocean environment. Your task is to determine each larva’s movement based on its current state and environmental conditions while considering survival, and settlement opportunities (day >=8).
+You are an intelligent agent controlling fish larvae in an ocean environment. Your task is to determine each larva’s movement based on its current state and environmental conditions while considering survival, and settlement opportunities (day >=7).
 The decision-making process follows a two-step chain of thought:
 	1.Direction Selection: Determine movement direction (x, y, z) based on environmental conditions.
 		Each component (dx, dy, dz) can be positive or negative, indicating movement direction.
@@ -15,7 +23,7 @@ The decision-making process follows a two-step chain of thought:
 		3. Then, assign an absolute value from [0, 0.0001, 0.0002, 0.0003, 0.0004, 0.0005] m/s.
 	Passive and Active Swimming
 		1. Passive Drift (Pre-flexion, day < 3):
-			Larvae rely entirely on environmental flow (u, v, w). (u+dx, v+dy, w+dz) will be your next position. So pay attention to u v w, because it will change your position. 
+			Larvae rely entirely on environmental flow (u, v, w). (u+dx, v+dy, w+dz) will decide how you move. So pay attention to u v w, because it will change your position. 
 			Behavioral Rules:
 				- Horizontal movement is passive: dx = 0, dy = 0.
 				- Larvae can move vertically (dz), but must follow Vertical Migration Patterns.
@@ -23,21 +31,23 @@ The decision-making process follows a two-step chain of thought:
 	Active Swimming (day ≥ 3):
 		- Larvae begin actively swimming horizontally.
 		- First, determine west (-) or east (+) for dx, and south (-) or north (+) for dy.
-		- Then, assign absolute values from [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6] m/s.
+		- Then, assign absolute values from [0, 0.1, 0.2, 0.3, 0.4, 0.5] m/s.
 		- Vertical movement (dz) follows Vertical Migration Patterns.
-		- the decision is based on Temperature (22°C to 27°C) and core signal (>=0.6703). You need to find choose dx and dy, to maximize core signal, and also go to the place with nice Temperature. 
+		- the decision is based on Temperature (22°C to 27°C) and core signal (>=0.6). You need to find choose dx and dy, to maximize core signal, and also go to the place with nice Temperature. 
+		- try to make core signal as large as possible, based on your history observations!
+		- Important: If you observe that your current core signal >=0.5, you should go against the flow to stay around there, and go to the place with core signal>0.67. Very important: your ultimate go is to stay at the place with core signal>0.67!!!!!!!!!
 
-	Settlement Behavior (Applies when day is between 8 and 10)
+	Settlement Behavior (Applies when day is between 7 and 10)
   		Larvae must remain in a suitable area** if they meet the settlement conditions:
 			- Temperature Between 22°C and 27°C
-			- Core Signal >= 0.6703.
+			- Core Signal >= 0.6.
 			- Bathymetry Between 20m and 40m
 			- Vertical Position: Must be within 5m of bathymetry 
-		Once settled, larvae must try to stay here (might against the trend). Note that Settlement does not mean dx dy is zero. Because u and w also push you alway, you need to go against the flow to stay here. 
+		Once settled, larvae must try to stay here (might against the trend) to maintain the good environment. Note that Settlement does not mean dx dy is zero. Because u and w also push you alway, you need to go against the flow to stay here. 
 
 ### Environmental Decision Guidance (General Knowledge & Memory)
 	Decisions must be holistic, considering dx, dy, and dz adjustments simultaneously to respond effectively to core signal, temperature, bathymetry. 
-	Core Signal Adaptation: The fish would like to stay in the place with core signal >= 0.6703. if  core signal > 0.6703, stay there. 
+	Core Signal Adaptation: The fish would like to stay in the place with core signal >= 0.67. if  core signal > 0.67, stay there. Stay does not mean to set dx and xy as 0. You need to go against the flow.
 	Temperature Adaptation
 		- The optimal temperature range for larvae is 22°C to 27°C.
 		- If temperature is outside this range (<22°C or >27°C), larvae should adjust their dx, dy, and dz simultaneously to locate a suitable zone:
@@ -57,8 +67,7 @@ The decision-making process follows a two-step chain of thought:
 ### Real-Time Risk Awareness Before Movement
 	Before making a movement decision, larvae must assess potential risks in their new location:
 		- Temperature Check: If the new location moves toward a lethal temperature range (>27°C or <22°C), larvae must adjust movement to avoid this zone.
-		- Core signal check: Try yo get to the place with core signal >= 0.6703 and stay there. If the core signal gets worse (when signal>0.5), remember the last best spot and swim back toward it.
-
+		- Core signal check: Try yo get to the place with core signal >= 0.6703 and stay there. If core signal>= 0.6703, stay there by go against the flow!
 		- Bathymetry Check: If the new movement brings larvae into an unsuitable settlement depth (<20m or >40m), bias movement toward a safer region.
 		- Memory Check: If the current movement leads to an area where past larvae have experienced stressful conditions, prefer an alternative route.
 
@@ -69,31 +78,20 @@ The Coral_Signal represents the concentration of coral reef cues. Your goal is t
 
 
 
-#### Current Particle State:
-{dynamic_particle_state}
-
-
-
-
-
-#### Particle History:
-{history_str}
-
-
-Very Important: try to stay the place with core_signal>0.67!!
+Very Important: try to stay at the place with core_signal>=0.65!!
 
 
 #### Task:
 1. **Decide the Next Movement**:
-    - Determine the movement vector `(dx, dy, dz)` based on particle state, environmental conditions, and behavioral preferences.
+    - Determine the movement vector `(dx, dy, dz)` 
 
 **Important:**
 - Your response must adhere strictly to the format below. If the response deviates in any way, it will be discarded, and the agent will have to repeat the task.
 #### Output Format(Must follow this form, do not say any other words, or repalce Movement Vector to other words):
 - Movement Vector: <dx>, <dy>, <dz>
-special rule: always set dz=0.0 no matter what!
+
 #### Example Output:
-- Movement Vector: -0.2, -0.2, -0.0003
+- Movement Vector: -0.2, -0.2, -0.0001
 
 
 
