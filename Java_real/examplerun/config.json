@@ -1,0 +1,7 @@
+{
+    "api_key": "YourAPIKEY",
+    "azure_endpoint": "https://guhuwang.openai.azure.com/",
+    "api_version": "2024-10-21",
+    "model": "gpt-4o"
+}
+

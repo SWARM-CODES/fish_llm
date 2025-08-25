@@ -1,0 +1,13 @@
+{
+    "x": {"default": 0.0, "enabled": true},
+    "y": {"default": 0.0, "enabled": true},
+    "z": {"default": 0.0, "enabled": true},
+    "u": {"default": 0.0, "enabled": true},
+    "v": {"default": 0.0, "enabled": true},
+    "w": {"default": 0.0, "enabled": true},
+    "temperature": {"default": 0.0, "enabled": true},
+    "bathymetry": {"default": 0.0, "enabled": true},
+    "coral_signal": {"default": 0.0, "enabled": false},
+    "day": {"default": 0.0, "enabled": true}
+}
+
