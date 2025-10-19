@@ -1,33 +1,36 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Number of times to repeat the process
-NUM_REPEATS=15
+NUM_REPEATS=12
+OUTDIR="output"
+#mkdir -p "$OUTDIR"
 
-# Create output directory if it doesn't exist
-#mkdir -p output
+for i in $(seq 8 "$NUM_REPEATS"); do
+  echo "======================================"
+  echo "Starting simulation run $i..."
 
-# Loop for the given number of repeats
-for ((i=1; i<=NUM_REPEATS; i++))
-do
-    echo "Starting simulation run $i..."
+  # Run Python script (synchronously)
+  if python3 main.py > test.log 2>&1; then
+    echo "Simulation run $i completed successfully."
 
-    # Run the Python script and wait for it to complete
-    python3 main.py
-
-    # Check if simulation completed message is present
-    if [ $? -eq 0 ]; then
-        echo "Simulation run $i completed successfully."
-
-        # Move and rename the output files
-        mv iteration_1_explanations.json output_mechanism/output_onlyRheotaxis/iteration_${i}_explanations.json
-        mv trajectories.nc output_mechanism/output_onlyRheotaxis/trajectories_${i}.nc
-
-        echo "Files for run $i moved to output directory."
+    # Move and rename the output files
+    if [[ -f trajectories.nc ]]; then
+      mv -f trajectories.nc "$OUTDIR/trajectories${i}.nc"
     else
-        echo "Simulation run $i failed. Skipping file move."
+      echo "Warning: trajectories.nc not found for run $i."
     fi
 
-    echo "--------------------------------------"
+    if [[ -f test.log ]]; then
+      mv -f test.log "$OUTDIR/record${i}.log"
+    fi
+
+    echo "Files for run $i moved to output directory."
+  else
+    status=$?
+    echo "Simulation run $i failed with status $status. Skipping file move."
+  fi
+
+  echo "--------------------------------------"
 done
 
 echo "All $NUM_REPEATS simulations completed."

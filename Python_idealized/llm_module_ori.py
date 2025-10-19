@@ -1,6 +1,6 @@
 import time
 from openai import OpenAI
-import json
+import json, re
 import numpy as np
 from utilities import (
     get_enabled_states,
@@ -59,6 +59,18 @@ class LLMBehaviorAPI:
             else:
                 state_lines.append(f"- {key.capitalize()}: {value:.2f}")
         return "\n".join(state_lines)
+    def convert_messages_for_responses(self, messages):
+        """
+        Convert chat-completions style messages into Responses API format.
+        Each message's content becomes a single input_text block.
+        """
+        converted = []
+        for m in messages:
+            converted.append({
+                "role": m["role"],
+                "content": [{"type": "input_text", "text": m["content"]}]
+            })
+        return converted
 
     def call_llm_batch(self, particle_states, history_states,batch_size, system_prompt, max_tokens_per_particle=3000, temperature=0.7):
         num_particles = len(particle_states)
@@ -114,27 +126,57 @@ class LLMBehaviorAPI:
             retries, max_retries = 0, 3
             while True:
                 try:
-                    resp = self.client.chat.completions.create(
+                   resp = self.client.responses.create(
                         model=self.model,
-                        messages=messages,
-                        max_tokens=max_tokens_per_particle * len(batch_particles),
-                        temperature=temperature,
-                    )
-                    print(f"[DEBUG] Raw response for batch starting at {i} (size {len(batch_particles)})")
-                    print(resp.choices[0].message.content)   # full raw
-                    batch_results.append((i, len(batch_particles), resp))
-                    break  # success
+                        input=self.convert_messages_for_responses(messages),
+                        max_output_tokens=max_tokens_per_particle*len(batch_particles),
+                        #text={"format": "json"},
+                        #temperature=temperature,
+                   )    
+                   # for earlier than chatgpt-5
+                   # resp = self.client.chat.completions.create(
+                   #     model=self.model,
+                   #     messages=messages,
+                   #     max_tokens=max_tokens_per_particle * len(batch_particles),
+                   #     temperature=temperature,
+                   # )
+                   print(f"[DEBUG] Raw response for batch starting at {i} (size {len(batch_particles)})")
+                   #print(resp.choices[0].message.content)
+                   #print(resp)   # full raw
+                   batch_results.append((i, len(batch_particles), resp))
+                   break  # success
                 except Exception as e:
                     retries += 1
                     print(f"[LLM batch error] attempt {retries}/{max_retries}: {e}")
                     if retries >= max_retries:
                         # append a sentinel None so downstream can handle fallback
-                       batch_results.append((i, len(batch_particles), None))
-                       break
+                        batch_results.append((i, len(batch_particles), None))
+                        break
                     time.sleep(2 ** retries)  # backoff
 
         return batch_results
-    
+
+    def extract_text_from_resp(self, resp):
+        """Responses API only: pull concatenated text from output_text or message->content blocks."""
+        if hasattr(resp, "output_text") and resp.output_text:
+            return resp.output_text
+        if hasattr(resp, "output") and resp.output:
+            texts = []
+            for item in resp.output:
+                if getattr(item, "type", None) != "message":
+                    continue
+                content = getattr(item, "content", None)
+                if isinstance(content, list):
+                    for blk in content:
+                        txt = getattr(blk, "text", None)
+                        if txt:
+                            texts.append(txt)
+                elif isinstance(content, str):
+                    texts.append(content)
+            if texts:
+                return "\n".join(texts)
+        return ""    
+
     def parse_llm_batch_responses(self, batch_results, num_particles):
 
         behaviors = np.zeros((num_particles, 3), dtype=float)
@@ -145,7 +187,8 @@ class LLMBehaviorAPI:
                 continue
 
             try:
-                text = resp.choices[0].message.content.strip()
+                #text = resp.choices[0].message.content.strip() ###GPT-4OMINI
+                text = self.extract_text_from_resp(resp).strip() ###GPT-5
                 # Expect a JSON array; if wrapped, extract with regex
                 try:
                     parsed = json.loads(text)
@@ -157,13 +200,16 @@ class LLMBehaviorAPI:
                         raise
                     parsed = json.loads(m.group(1))
 
+                print(json.dumps(parsed, indent=2, ensure_ascii=False))
             # map ordered results into the correct slice
                 for k in range(cnt):
                     try:
                         item = parsed[k]
-                        dx = float(item.get("dx", 0.0))
-                        dy = float(item.get("dy", 0.0))
-                        dz = float(item.get("dz", 0.0))
+                        q4 = ((item.get("brief_rationale") or {}).get("q4") or {})
+                        dx = float(q4.get("dx", 0.0))
+                        dy = float(q4.get("dy", 0.0))
+                        dz = float(q4.get("dz", 0.0))
+                        #print(f"[DEBUG] Parsed particle {item.get('particle','?')}: dx={dx}, dy={dy}, dz={dz}")
                     except Exception:
                         dx = dy = dz = 0.0
                     behaviors[i0 + k, :] = (dx, dy, dz)

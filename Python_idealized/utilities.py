@@ -34,7 +34,7 @@ def apply_boundary_conditions(x_pos, y_pos, z_pos, depth_pos, domain_length_x, d
         y_pos = 0
     elif y_pos > domain_length_y:
         y_pos = domain_length_y
-
+    #print(f"z_pos={z_pos}, depth_pos={depth_pos}")
     if z_pos > 0:
         z_pos = 0  # Stick to surface
     elif z_pos < depth_pos:
@@ -160,6 +160,12 @@ def hydrodynamic_and_behavior_update(
             x_pos += dx_env + dx_behavior
             y_pos += dy_env + dy_behavior
             z_pos += dz_env + dz_behavior
+
+            print(
+                f"[DEBUG] Particle {i}: "
+                f"dx_env={dx_env:.4f}, dy_env={dy_env:.4f}, dz_env={dz_env:.4f} | "
+                f"dx_behavior={dx_behavior:.4f}, dy_behavior={dy_behavior:.4f}, dz_behavior={dz_behavior:.4f}"
+                )
 
             # Store trajectory and apply boundary conditions
             trajectories_bathy[i, step_index] = get_bathymetry(x_pos, y_pos, bathymetry, domain_length_x, domain_length_y, x_dim, y_dim)

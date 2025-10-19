@@ -124,7 +124,7 @@ for ite in range(1, num_iterations + 1):
     counter = 0
     iteration_explanations = []
     for day in range(num_days):
-        print(f"Day {day + 1}/{num_days}")
+        print(f"Day {day}/{num_days}")
         # Generate daily velocity fields
         #if day % 6 == 0:
         counter+=1

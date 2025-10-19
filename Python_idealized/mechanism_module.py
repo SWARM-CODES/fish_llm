@@ -24,7 +24,7 @@ class MechanismBehavior:
         theta_current = np.arctan2(flow_velocity[1], flow_velocity[0])  # Flow direction angle
         theta_direction = theta_current + np.pi  # Opposing direction (rheotaxis)
         theta_rheo = np.random.vonmises(theta_direction, 2)  # Sample from Von Mises distribution
-        return theta_rheo
+        return None #return none to close rheotaxis, theta_rheo
 
     def compute_reef_orientation(self, position, reef_positions, detection_radius):
         """
@@ -41,16 +41,21 @@ class MechanismBehavior:
         if closest_reef is not None and min_distance < detection_radius:
             direction_to_reef = (closest_reef - position) / min_distance  # Unit vector toward reef
             theta_reef = np.arctan2(direction_to_reef[1], direction_to_reef[0])
-            return None #theta_reef
+            return None #return none to close reef, theta_reef
         return None  # No reef detected within range
 
-    def mechanism_particle_behavior(self, particle_states, reef_positions, detection_radius):
+    def mechanism_particle_behavior(self, particle_states, reef_positions, detection_radius, current_day):
         """
         Update particle behavior based on mechanism-based swimming model.
         """
         behaviors = []
+        egg_stage = (0 <= current_day <= 2)
 
         for state in particle_states:
+            if egg_stage:
+               behaviors.append([0.0, 0.0, 0.0])
+               continue
+
             x, y, z = state["x"], state["y"], state["z"]
             u_vel, v_vel = state["u"], state["v"]
 
