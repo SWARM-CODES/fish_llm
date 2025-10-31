@@ -1,3 +1,0 @@
-# Developer documentation {#sec-developer}
-
-In this section, the Ichthyop console is described.
