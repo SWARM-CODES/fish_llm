@@ -1,7 +1,7 @@
 import numpy as np
 
 def reward_function_1(trajectories_x, trajectories_y, trajectories_z, trajectories_h, time_window,
-                      target_locations, radius=2.5, depth_threshold=200.0):
+                      target_locations, radius=0.5, depth_threshold=200.0):
     """
     Reward function for fish larvae settlement based on proximity to coral reefs and bathymetry.
     """

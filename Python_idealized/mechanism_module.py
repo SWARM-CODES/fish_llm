@@ -25,6 +25,7 @@ class MechanismBehavior:
         theta_direction = theta_current + np.pi  # Opposing direction (rheotaxis)
         theta_rheo = np.random.vonmises(theta_direction, 2)  # Sample from Von Mises distribution
         return None #return none to close rheotaxis, theta_rheo
+        #return theta_rheo
 
     def compute_reef_orientation(self, position, reef_positions, detection_radius):
         """
@@ -41,7 +42,8 @@ class MechanismBehavior:
         if closest_reef is not None and min_distance < detection_radius:
             direction_to_reef = (closest_reef - position) / min_distance  # Unit vector toward reef
             theta_reef = np.arctan2(direction_to_reef[1], direction_to_reef[0])
-            return None #return none to close reef, theta_reef
+            #return None #return none to close reef, theta_reef
+            return theta_reef
         return None  # No reef detected within range
 
     def mechanism_particle_behavior(self, particle_states, reef_positions, detection_radius, current_day):
@@ -60,7 +62,7 @@ class MechanismBehavior:
             u_vel, v_vel = state["u"], state["v"]
 
             # Compute swimming velocity (independent of flow)
-            U_new, V_new, dz = self.compute_velocity(user_velocity=0.4)
+            U_new, V_new, dz = self.compute_velocity(user_velocity=0.15)
             swimming_velocity = np.array([U_new, V_new])
 
             # Apply rheotaxis
@@ -74,6 +76,8 @@ class MechanismBehavior:
             # Determine final movement direction
             if theta_rheo is None and theta_reef is None:
                 U_final, V_final = U_new, V_new  # Use default swimming velocity
+                print("U_final =", U_final)
+                print("V_final =", V_final)
             else:
                 theta_final = theta_rheo if theta_rheo is not None else 0  # Default to 0 if none
                 if theta_reef is not None:
@@ -82,6 +86,8 @@ class MechanismBehavior:
                 speed = np.linalg.norm([U_new, V_new])  # Compute absolute velocity magnitude
                 U_final = speed * np.cos(theta_final)
                 V_final = speed * np.sin(theta_final)
+                print("U_final =", U_final)
+                print("V_final =", V_final)
            # U_final = 0.0
            # V_final = 0.0
             behaviors.append([U_final, V_final, dz])

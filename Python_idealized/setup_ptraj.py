@@ -2,10 +2,10 @@ import numpy as np
 
 def initialize_particles(num_particles, domain_length_x, domain_length_y):
     #ini_x_positions = np.full(num_particles, domain_length_x / 2)
-    ini_x_positions = np.full(num_particles, domain_length_x - 5)  # Start at most east grid
+    ini_x_positions = np.full(num_particles, domain_length_x - 1)  # Start at most east grid
     #ini_y_positions0 = [50,50,450] #np.random.uniform(0, domain_length_y, num_particles)  # Random y positions
     #ini_y_positions = np.array([ini_y_positions0[0]] * (num_particles // 2) + [ini_y_positions0[1]] * (num_particles // 2))
-    ini_y_positions = np.linspace(150, 350, num_particles) #np.random.uniform(0, domain_length_y, num_particles)  # Random y positions
+    ini_y_positions = np.linspace(30, 70, num_particles) #np.random.uniform(0, domain_length_y, num_particles)  # Random y positions
     ini_z_positions = np.zeros(num_particles)  # Start at surface
     return ini_x_positions, ini_y_positions, ini_z_positions
 

@@ -63,7 +63,7 @@ HISTORY:
   - Conditions for settlement success:  
     - Coral_Signal ≥ 0.6703  
     - Temperature between 22–27 °C  
-    - Bathymetry between 20–40 m  
+    - Bathymetry between 40–60 m  
     - z-position ≤ 5 m above seafloor  
   - If suitable: station-keeping. Station-keeping means keeping your net movement near zero by cancelling currents (dx+u≈0, dy+v≈0, dz+w≈0).  
   - If unsuitable: continue swimming toward improving conditions.  
@@ -73,8 +73,8 @@ HISTORY:
 - If temperature <22 or >27 °C, it is unsafe — larvae must adapt movement accordingly.  
 
 #### 4.3 Directional and Speed Guidance
-- Allowed horizontal speeds: {0, 0.1, …, 1.0 m/s}.  
-- Allowed vertical speeds: {0, 0.0001, …, 0.0005 m/s}.  
+- Allowed horizontal speeds: {0, 0.05, 0.1, 0.15, 0.2, ..., 0.3 m/s}.  
+- Allowed vertical speeds: {0, 0.0001, ..., 0.0005 m/s}.  
 - Directions:  
   - East = +dx, West = –dx  
   - North = +dy, South = –dy  
@@ -112,7 +112,7 @@ HISTORY:
 - **Q4 — Directions → Magnitudes (Sign & Discrete Sets)**
   - First choose q2 Directions from {E/W/0, N/S/0, UP/DOWN/0}.
   - Then choose magnitudes: 
-  	|dx|, |dy| ∈ {0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 0.9, 1.0} m/s
+  	|dx|, |dy| ∈ {0, 0.05, 0.1, 0.15, 0.2, ..., 0.3} m/s
 	|dz| ∈ {0, 0.0001, 0.0002, 0.0003, 0.0004, 0.0005} m/s
   - Ensure signs of dx, dy, dz match direction exactly:
 	E ⇒ dx > 0; W ⇒ dx < 0; 0 ⇒ dx = 0.0
@@ -164,7 +164,7 @@ Each element must follow this schema. Any deviation will cause the API to reject
       "q4": {
         "day": 5,
         "directions": ["E", "0", "DOWN"],
-        "dx": 0.4,
+        "dx": 0.1,
         "dy": 0.0,
         "dz": -0.0002
       }

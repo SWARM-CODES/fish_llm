@@ -19,7 +19,7 @@ from batchmake import estimate_batch_size, divide_particles_into_batches
 x_dim = 50   # 50 grid points in x-direction
 y_dim = 50   # 50 grid points in y-direction
 z_dim = 20   # 20 sigma layers
-grid_resolution = 10
+grid_resolution = 2
 sigma_layers = np.linspace(0, -1, z_dim)
 
 # Particle tracking setup
@@ -37,7 +37,7 @@ max_particles_per_batch = estimate_batch_size("prompt.txt", batch_size=batch_siz
 #particle_batches = divide_particles_into_batches(num_particles, max_particles_per_batch)
 
 
-domain_length_x, domain_length_y, domain_depth = 500, 500, 100
+domain_length_x, domain_length_y, domain_depth = 100, 100, 100
 
 x_positions, y_positions, z_positions = initialize_particles(num_particles, domain_length_x, domain_length_y)
 trajectories_x, trajectories_y, trajectories_z, trajectories_bathy, trajectories_temp = initialize_trajectories(num_particles, total_steps)
@@ -50,7 +50,7 @@ llm_api = LLMBehaviorAPI(config_path="config.json")
 
 
 # Run simulation
-detection_radius = 15
+detection_radius = 2 ###mechanism run used
 reef_locations = np.loadtxt("reef_location.txt")
 target_locations = [(x, y) for x, y in reef_locations]
 start_step, end_step = 48, 60
@@ -170,7 +170,7 @@ for ite in range(1, num_iterations + 1):
 
                     history_states[i].append(history_entry)
                 # Update behavior using mechanism based model
-                #particle_behavior= mechanism_model.mechanism_particle_behavior(particle_states, target_locations, detection_radius)
+                #particle_behavior= mechanism_model.mechanism_particle_behavior(particle_states, target_locations, detection_radius, day)
 
                 # Update particle behavior using LLM
                 

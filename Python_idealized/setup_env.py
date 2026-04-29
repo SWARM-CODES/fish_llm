@@ -5,16 +5,16 @@ from netCDF4 import Dataset
 x_dim = 50   # 50 grid points in x-direction
 y_dim = 50   # 50 grid points in y-direction
 z_dim = 20   # 20 sigma layers
-grid_resolution = 10  # 1 km resolution per grid cell
+grid_resolution = 2  # 2 km resolution per grid cell
 num_days = 30  # Number of days for simulation
 
 # Define velocity and bathymetry parameters
-surface_velocity = -0.5   # m/s, east-to-west flow at the surface
-velocity_decrease = 0.02  # m/s, decrease in velocity per sigma layer to bottom
+surface_velocity = -0.1   # m/s, east-to-west flow at the surface
+velocity_decrease = 0.004  # m/s, decrease in velocity per sigma layer to bottom
 bathymetry_shallow = -10  # Depth at the western edge in meters
 bathymetry_deep = -100    # Depth at the eastern edge in meters
 
-def create_daily_velocity_fields(u_velocity_climatology, day, num_days, v_max_variation=0.5):
+def create_daily_velocity_fields(u_velocity_climatology, day, num_days, v_max_variation=0.10):
     """
     Generate daily velocity fields with climatology as the background.
     
@@ -30,7 +30,7 @@ def create_daily_velocity_fields(u_velocity_climatology, day, num_days, v_max_va
         daily_w_velocity: 3D numpy array (x, y, z), vertical velocity (remains zero).
     """
     # Add sinusoidal daily variation to u_velocity
-    random_variation = 1 + 0.1 * np.sin(2 * np.pi * day / num_days)  # ±10% periodic variation
+    random_variation = 1 + 0.10 * np.sin(2 * np.pi * day / num_days)  # ±10% periodic variation
     daily_u_velocity = u_velocity_climatology * random_variation
 
     # Generate random daily variations for v_velocity (random in each grid point)
@@ -40,7 +40,7 @@ def create_daily_velocity_fields(u_velocity_climatology, day, num_days, v_max_va
     daily_w_velocity = np.zeros_like(u_velocity_climatology)
 
     return daily_u_velocity, daily_v_velocity, daily_w_velocity
-def calculate_signal_map(X, Y, reef_locations, threshold=15, decay_factor=-0.20):
+def calculate_signal_map(X, Y, reef_locations, threshold=2, decay_factor=-1.0):
     """
     Calculate the average signal strength at each grid point due to coral reef influence.
 
@@ -62,7 +62,7 @@ def calculate_signal_map(X, Y, reef_locations, threshold=15, decay_factor=-0.20)
 
         # Apply diffusive decay function
         signal = np.exp(decay_factor * distances)
-
+        signal[distances > threshold] = 0
         #weights = np.exp(-distances)
         #weights[distances > threshold] = 0
         signal_map = np.maximum(signal_map, signal)
