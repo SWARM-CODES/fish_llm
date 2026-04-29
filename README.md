@@ -1,4 +1,4 @@
-# IchthyopAgent: A Generative AI-Agent Based Lagrangian Tool for Modeling Ichthyoplankton Dynamics (under development)
+# SWARM: A Generative AI-Agent Based Lagrangian Tool for Modeling Ichthyoplankton Dynamics
 
 This repository contains a generative AI–agent–based Lagrangian model designed to simulate particle transport in the ocean. The framework combines **hydrodynamic-driven passive transport** with **LLM-based agents** that mimic the active behavior of organisms during the larval stages of marine animals (e.g., fish, mussels).  
 
@@ -16,13 +16,12 @@ The project provides two versions of the model:
 - Xing Zhou¹, *,+  
 - Guanghui Wang²,+  
 - Renzhi Wu³  
-- Annalisa Bracco¹,⁴,⁵  
+- Annalisa Bracco4  
 
 ¹ School of Earth and Atmospheric Sciences, Georgia Institute of Technology, Atlanta, GA, USA  
 ² College of Computing, Georgia Institute of Technology, Atlanta, GA, USA  
 ³ Meta Platforms, Inc., Menlo Park, CA, USA  
-⁴ Program in Ocean Sciences and Engineering, Georgia Institute of Technology, Atlanta, GA, USA  
-⁵ Fondazione Centro Euro-Mediterraneo sui Cambiamenti Climatici, Bologna, Italy  
+4 Fondazione Centro Euro-Mediterraneo sui Cambiamenti Climatici, Bologna, Italy  
 
 * Corresponding Author: [xzhou473@gatech.edu](mailto:xzhou473@gatech.edu) 
 + Xing Zhou and Guanghui Wang contribute equally to this project 
